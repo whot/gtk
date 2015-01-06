@@ -32,7 +32,10 @@ G_BEGIN_DECLS
 #define GDK_DEVICE(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), GDK_TYPE_DEVICE, GdkDevice))
 #define GDK_IS_DEVICE(o)        (G_TYPE_CHECK_INSTANCE_TYPE ((o), GDK_TYPE_DEVICE))
 
+#define GDK_TYPE_DEVICE_TOOL    (gdk_device_tool_get_type ())
+
 typedef struct _GdkTimeCoord GdkTimeCoord;
+typedef struct _GdkDeviceTool GdkDeviceTool;
 
 /**
  * GdkInputSource:
@@ -294,6 +297,12 @@ const gchar *gdk_device_get_product_id      (GdkDevice *device);
 
 GDK_AVAILABLE_IN_3_18
 GdkAxisFlags gdk_device_get_axes            (GdkDevice *device);
+
+GDK_AVAILABLE_IN_3_18
+GType gdk_device_tool_get_type (void) G_GNUC_CONST;
+
+GDK_AVAILABLE_IN_3_18
+guint gdk_device_tool_get_serial (GdkDeviceTool *tool);
 
 G_END_DECLS
 
