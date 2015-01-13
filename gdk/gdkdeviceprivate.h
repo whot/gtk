@@ -34,6 +34,7 @@ typedef struct _GdkDeviceKey GdkDeviceKey;
 struct _GdkDeviceTool
 {
   guint serial;
+  GdkDeviceToolType type;
   gint ref_count;
 };
 
@@ -187,13 +188,14 @@ GdkWindow * _gdk_device_window_at_position    (GdkDevice        *device,
                                                gboolean          get_toplevel);
 
 /* Device tools */
-GdkDeviceTool *gdk_device_tool_new    (guint          serial);
-GdkDeviceTool *gdk_device_lookup_tool (GdkDevice     *device,
-                                       guint          serial);
-void           gdk_device_add_tool    (GdkDevice     *device,
-                                       GdkDeviceTool *tool);
-void           gdk_device_update_tool (GdkDevice     *device,
-                                       GdkDeviceTool *tool);
+GdkDeviceTool *gdk_device_tool_new    (guint              serial,
+                                       GdkDeviceToolType  type);
+GdkDeviceTool *gdk_device_lookup_tool (GdkDevice         *device,
+                                       guint              serial);
+void           gdk_device_add_tool    (GdkDevice         *device,
+                                       GdkDeviceTool     *tool);
+void           gdk_device_update_tool (GdkDevice         *device,
+                                       GdkDeviceTool     *tool);
 
 GdkDeviceTool *gdk_device_tool_ref    (GdkDeviceTool *tool);
 void           gdk_device_tool_unref  (GdkDeviceTool *tool);

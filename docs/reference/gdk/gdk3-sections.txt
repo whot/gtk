@@ -710,6 +710,7 @@ GdkDevice
 GdkInputSource
 GdkInputMode
 GdkAxisUse
+GdkDeviceToolType
 GdkDeviceType
 GdkGrabOwnership
 
@@ -754,6 +755,7 @@ gdk_device_get_last_event_window
 
 <SUBSECTION>
 gdk_device_tool_get_serial
+gdk_device_tool_get_tool_type
 
 <SUBSECTION Standard>
 GDK_TYPE_AXIS_USE
