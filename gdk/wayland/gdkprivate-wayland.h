@@ -174,6 +174,8 @@ void              _gdk_wayland_device_manager_add_seat (GdkDeviceManager *device
 void              _gdk_wayland_device_manager_remove_seat (GdkDeviceManager *device_manager,
                                                            guint32           id);
 
+void _gdk_wayland_device_manager_add_tablet_manager (struct wl_tablet_manager *wl_tablet_manager);
+
 typedef struct _GdkWaylandDeviceData GdkWaylandDeviceData;
 
 GdkKeymap *_gdk_wayland_device_get_keymap (GdkDevice *device);

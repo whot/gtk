@@ -27,6 +27,7 @@
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 #include <wayland-egl.h>
+#include <gdk/wayland/wayland-tablet-client-protocol.h>
 #include <gdk/wayland/gtk-shell-client-protocol.h>
 #include <gdk/wayland/xdg-shell-client-protocol.h>
 
