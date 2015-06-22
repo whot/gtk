@@ -2026,6 +2026,181 @@ _gdk_wayland_device_manager_remove_tablet (GdkWaylandDeviceTabletPair *device_pa
 }
 
 static void
+tablet_handle_proximity_in (void                  *data,
+                            struct wl_tablet      *wl_tablet,
+                            uint32_t               serial,
+                            uint32_t               time,
+                            struct wl_tablet_tool *wl_tablet_tool,
+                            struct wl_surface     *surface)
+{
+  GdkWaylandDeviceTabletPair *device_pair = data;
+  GdkWaylandDeviceData *device = device_pair->wd;
+  GdkWaylandDisplay *wayland_display = GDK_WAYLAND_DISPLAY (device->display);
+  GdkDeviceTool *tool =
+    wl_tablet_tool_get_user_data (wl_tablet_tool);
+  GdkWindow *window = wl_surface_get_user_data (surface);
+  GdkEvent *event;
+
+  if (!surface)
+      return;
+  if (!GDK_IS_WINDOW (window))
+      return;
+
+  _gdk_wayland_display_update_serial (wayland_display, serial);
+  device_pair->pointer_info.enter_serial = serial;
+
+  device_pair->pointer_info.focus = g_object_ref (window);
+  device_pair->current_device =
+    tablet_select_device_for_tool (device_pair, tool);
+
+  /* Add the tool to the device if we haven't already done so */
+  if (serial != 0 &&
+      !gdk_device_lookup_tool (device_pair->current_device, serial))
+    gdk_device_add_tool (device_pair->current_device, tool);
+
+  gdk_device_update_tool (device_pair->current_device, tool);
+
+  event = gdk_event_new (GDK_PROXIMITY_IN);
+  event->proximity.type = GDK_PROXIMITY_IN;
+  event->proximity.window = g_object_ref (device_pair->pointer_info.focus);
+  gdk_event_set_device (event, device_pair->master);
+  gdk_event_set_source_device (event, device_pair->current_device);
+  event->proximity.time = time;
+
+  GDK_NOTE (EVENTS,
+            g_message ("proximity in, tool %d",
+                       gdk_device_tool_get_tool_type (tool)));
+
+  _gdk_wayland_display_deliver_event (device->display, event);
+
+  gdk_wayland_device_update_window_cursor (device_pair->master);
+
+  event = gdk_event_new (GDK_ENTER_NOTIFY);
+  event->crossing.window = g_object_ref (device_pair->pointer_info.focus);
+  gdk_event_set_device (event, device_pair->master);
+  gdk_event_set_source_device (event, device_pair->current_device);
+  event->crossing.subwindow = NULL;
+  event->crossing.time = time;
+  event->crossing.mode = GDK_CROSSING_NORMAL;
+  event->crossing.detail = GDK_NOTIFY_ANCESTOR;
+  event->crossing.focus = TRUE;
+  event->crossing.state = device_get_modifiers (device->master_pointer);
+
+  get_coordinates (device_pair->master,
+                   &event->crossing.x,
+                   &event->crossing.y,
+                   &event->crossing.x_root,
+                   &event->crossing.y_root);
+
+  GDK_NOTE (EVENTS,
+            g_message ("enter, device %p surface %p",
+                       device, device_pair->pointer_info.focus));
+
+  _gdk_wayland_display_deliver_event (device->display, event);
+}
+
+static void
+tablet_handle_proximity_out (void             *data,
+                             struct wl_tablet *wl_tablet,
+                             uint32_t          time)
+{
+  GdkWaylandDeviceTabletPair *device_pair = data;
+  GdkWaylandDeviceData *device = device_pair->wd;
+  GdkEvent *event;
+
+  event = gdk_event_new (GDK_LEAVE_NOTIFY);
+  event->crossing.window = g_object_ref (device_pair->pointer_info.focus);
+  gdk_event_set_device (event, device_pair->master);
+  gdk_event_set_source_device (event, device_pair->current_device);
+  event->crossing.subwindow = NULL;
+  event->crossing.time = time;
+  event->crossing.mode = GDK_CROSSING_NORMAL;
+  event->crossing.detail = GDK_NOTIFY_ANCESTOR;
+  event->crossing.focus = TRUE;
+  event->crossing.state = device_get_modifiers (device->master_pointer);
+
+  get_coordinates (device_pair->master,
+                   &event->crossing.x,
+                   &event->crossing.y,
+                   &event->crossing.x_root,
+                   &event->crossing.y_root);
+
+  GDK_NOTE (EVENTS,
+            g_message ("leave, device %p surface %p",
+                       device, device->pointer));
+
+  _gdk_wayland_display_deliver_event (device->display, event);
+
+  event = gdk_event_new (GDK_PROXIMITY_OUT);
+  event->proximity.window = g_object_ref (device_pair->pointer_info.focus);
+  gdk_event_set_device (event, device_pair->master);
+  gdk_event_set_source_device (event, device_pair->current_device);
+  event->proximity.time = time;
+
+  GDK_NOTE (EVENTS,
+            g_message ("proximity out"));
+
+  _gdk_wayland_display_deliver_event (device->display, event);
+
+  if (device->cursor)
+    gdk_wayland_pointer_stop_cursor_animation (&device_pair->pointer_info);
+
+  gdk_wayland_device_update_window_cursor (device_pair->master);
+  g_object_unref (device_pair->pointer_info.focus);
+  device_pair->pointer_info.focus = NULL;
+}
+
+static void
+tablet_handle_motion (void             *data,
+                      struct wl_tablet *wl_tablet,
+                      uint32_t          time,
+                      wl_fixed_t        sx,
+                      wl_fixed_t        sy)
+{
+  GdkWaylandDeviceTabletPair *device_pair = data;
+
+  device_pair->pointer_info.time = time;
+  device_pair->pointer_info.surface_x = wl_fixed_to_double (sx);
+  device_pair->pointer_info.surface_y = wl_fixed_to_double (sy);
+}
+
+static void
+tablet_handle_frame (void             *data,
+                     struct wl_tablet *wl_tablet)
+{
+  GdkWaylandDeviceTabletPair *device_pair = data;
+  GdkWaylandDeviceData *device = device_pair->wd;
+  GdkWaylandDisplay *display = GDK_WAYLAND_DISPLAY (device->display);
+  GdkEvent *event;
+
+  if (!device_pair->pointer_info.focus)
+    return;
+
+  event = gdk_event_new (GDK_MOTION_NOTIFY);
+  event->motion.window = g_object_ref (device_pair->pointer_info.focus);
+  gdk_event_set_device (event, device_pair->master);
+  gdk_event_set_source_device (event, device_pair->current_device);
+  event->motion.time = device_pair->pointer_info.time;
+  event->motion.state = device_get_modifiers (device_pair->master);
+  event->motion.is_hint = FALSE;
+  gdk_event_set_screen (event, display->screen);
+
+  get_coordinates (device_pair->master,
+                   &event->motion.x,
+                   &event->motion.y,
+                   &event->motion.x_root,
+                   &event->motion.y_root);
+
+  GDK_NOTE (EVENTS,
+            g_message ("tablet motion %lf %lf, state %d",
+                       device_pair->pointer_info.surface_x,
+                       device_pair->pointer_info.surface_y,
+                       event->button.state));
+
+  _gdk_wayland_display_deliver_event (device->display, event);
+}
+
+static void
 tablet_handler_placeholder ()
 {
 }
@@ -2077,16 +2252,16 @@ static const struct _wl_pointer_gesture_pinch_listener gesture_pinch_listener = 
 };
 
 static const struct wl_tablet_listener tablet_listener = {
-  tablet_handler_placeholder, /* proximity_in */
-  tablet_handler_placeholder, /* proximity_out */
-  tablet_handler_placeholder, /* motion */
+  tablet_handle_proximity_in,
+  tablet_handle_proximity_out,
+  tablet_handle_motion,
   tablet_handler_placeholder, /* down */
   tablet_handler_placeholder, /* up */
   tablet_handler_placeholder, /* pressure */
   tablet_handler_placeholder, /* distance */
   tablet_handler_placeholder, /* tilt */
   tablet_handler_placeholder, /* button */
-  tablet_handler_placeholder, /* frame */
+  tablet_handle_frame,
   tablet_handle_removed
 };
 
