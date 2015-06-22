@@ -35,6 +35,7 @@
 
 #include <sys/time.h>
 #include <sys/mman.h>
+#include <linux/input.h>
 
 typedef struct _GdkWaylandTouchData GdkWaylandTouchData;
 typedef struct _GdkWaylandPointerData GdkWaylandPointerData;
@@ -2379,6 +2380,41 @@ tablet_handle_tilt (void             *data,
 }
 
 static void
+tablet_handle_button (void             *data,
+                      struct wl_tablet *wl_tablet,
+                      uint32_t          serial,
+                      uint32_t          time,
+                      uint32_t          button,
+                      uint32_t          state)
+{
+  GdkWaylandDeviceTabletPair *device_pair = data;
+  GdkEventType evtype;
+  guint n_button;
+
+  if (!device_pair->pointer_info.focus)
+    return;
+
+  device_pair->pointer_info.time = time;
+  device_pair->pointer_info.press_serial = serial;
+
+  if (button == BTN_STYLUS)
+    n_button = GDK_BUTTON_SECONDARY;
+  else if (button == BTN_STYLUS2)
+    n_button = GDK_BUTTON_MIDDLE;
+  else
+    return;
+
+  if (state == WL_TABLET_BUTTON_STATE_PRESSED)
+    evtype = GDK_BUTTON_PRESS;
+  else if (state == WL_TABLET_BUTTON_STATE_RELEASED)
+    evtype = GDK_BUTTON_RELEASE;
+  else
+    return;
+
+  tablet_notify_button_event (device_pair, evtype, n_button);
+}
+
+static void
 tablet_handle_frame (void             *data,
                      struct wl_tablet *wl_tablet)
 {
@@ -2416,11 +2452,6 @@ tablet_handle_frame (void             *data,
                        event->button.state));
 
   _gdk_wayland_display_deliver_event (device->display, event);
-}
-
-static void
-tablet_handler_placeholder ()
-{
 }
 
 static void
@@ -2478,7 +2509,7 @@ static const struct wl_tablet_listener tablet_listener = {
   tablet_handle_pressure,
   tablet_handle_distance,
   tablet_handle_tilt,
-  tablet_handler_placeholder, /* button */
+  tablet_handle_button,
   tablet_handle_frame,
   tablet_handle_removed
 };
