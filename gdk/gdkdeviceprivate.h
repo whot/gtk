@@ -35,6 +35,7 @@ struct _GdkDeviceTool
 {
   guint serial;
   GdkDeviceToolType type;
+  GdkAxisFlags tool_axes;
   gint ref_count;
 };
 
@@ -189,7 +190,8 @@ GdkWindow * _gdk_device_window_at_position    (GdkDevice        *device,
 
 /* Device tools */
 GdkDeviceTool *gdk_device_tool_new    (guint              serial,
-                                       GdkDeviceToolType  type);
+                                       GdkDeviceToolType  type,
+                                       GdkAxisFlags       tool_axes);
 GdkDeviceTool *gdk_device_lookup_tool (GdkDevice         *device,
                                        guint              serial);
 void           gdk_device_add_tool    (GdkDevice         *device,
