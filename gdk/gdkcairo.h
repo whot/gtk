@@ -81,6 +81,11 @@ void       gdk_cairo_draw_from_gl (cairo_t              *cr,
                                    int                   width,
                                    int                   height);
 
+GDK_AVAILABLE_IN_3_18
+void
+gdk_cairo_surface_paint_pixbuf (cairo_surface_t *surface,
+                                const GdkPixbuf *pixbuf);
+
 
 G_END_DECLS
 
