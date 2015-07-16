@@ -320,6 +320,31 @@ typedef enum
 } GdkWindowEdge;
 
 /**
+ * GdkAttachmentEdge:
+ * @GDK_ATTACHMENT_EDGE_NONE: no edge.
+ * @GDK_ATTACHMENT_EDGE_TOP: the top edge.
+ * @GDK_ATTACHMENT_EDGE_BOTTOM: the bottom edge.
+ * @GDK_ATTACHMENT_EDGE_LEFT: the left edge.
+ * @GDK_ATTACHMENT_EDGE_RIGHT: the right edge.
+ * @GDK_ATTACHMENT_EDGE_HORIZONTAL: the top or bottom edge.
+ * @GDK_ATTACHMENT_EDGE_VERTICAL: the left or right edge.
+ * @GDK_ATTACHMENT_EDGE_ANY: any edge.
+ *
+ * Determines an edge of an attachment rectangle.
+ */
+typedef enum
+{
+  GDK_ATTACHMENT_EDGE_NONE       = 0,
+  GDK_ATTACHMENT_EDGE_TOP        = 1 << 0,
+  GDK_ATTACHMENT_EDGE_BOTTOM     = 1 << 1,
+  GDK_ATTACHMENT_EDGE_LEFT       = 1 << 2,
+  GDK_ATTACHMENT_EDGE_RIGHT      = 1 << 3,
+  GDK_ATTACHMENT_EDGE_HORIZONTAL = GDK_ATTACHMENT_EDGE_TOP | GDK_ATTACHMENT_EDGE_BOTTOM,
+  GDK_ATTACHMENT_EDGE_VERTICAL   = GDK_ATTACHMENT_EDGE_LEFT | GDK_ATTACHMENT_EDGE_RIGHT,
+  GDK_ATTACHMENT_EDGE_ANY        = GDK_ATTACHMENT_EDGE_HORIZONTAL | GDK_ATTACHMENT_EDGE_VERTICAL
+} GdkAttachmentEdge;
+
+/**
  * GdkFullscreenMode:
  * @GDK_FULLSCREEN_ON_CURRENT_MONITOR: Fullscreen on current monitor only.
  * @GDK_FULLSCREEN_ON_ALL_MONITORS: Span across all monitors when fullscreen.
@@ -1120,6 +1145,11 @@ gboolean  gdk_window_show_window_menu          (GdkWindow      *window,
 GDK_AVAILABLE_IN_3_16
 GdkGLContext * gdk_window_create_gl_context    (GdkWindow      *window,
                                                 GError        **error);
+
+GDK_AVAILABLE_IN_3_18
+void       gdk_window_set_attachment_rectangle (GdkWindow          *window,
+                                                GdkAttachmentEdge   edge,
+                                                const GdkRectangle *rect);
 
 G_END_DECLS
 
