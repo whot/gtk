@@ -685,12 +685,20 @@ gdk_mir_window_impl_get_root_coords (GdkWindow *window,
                                      gint      *root_x,
                                      gint      *root_y)
 {
-  //g_printerr ("gdk_mir_window_impl_get_root_coords window=%p\n", window);
+  GdkMirWindowImpl *impl = GDK_MIR_WINDOW_IMPL (window->impl);
+
+  while (impl->transient_for)
+    {
+      x += impl->transient_x;
+      y += impl->transient_y;
+      window = impl->transient_for;
+      impl = GDK_MIR_WINDOW_IMPL (window->impl);
+    }
 
   if (root_x)
-    *root_x = x; // FIXME
+    *root_x = x;
   if (root_y)
-    *root_y = y; // FIXME
+    *root_y = y;
 }
 
 static gboolean
