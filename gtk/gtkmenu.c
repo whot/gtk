@@ -1477,13 +1477,17 @@ associate_menu_grab_transfer_window (GtkMenu *menu)
 }
 
 /**
- * gtk_menu_popup_for_device:
+ * gtk_menu_popup_against:
  * @menu: a #GtkMenu
  * @device: (allow-none): a #GdkDevice
  * @parent_menu_shell: (allow-none): the menu shell containing the triggering
  *     menu item, or %NULL
  * @parent_menu_item: (allow-none): the menu item whose activation triggered
  *     the popup, or %NULL
+ * @edge: a #GdkAttachmentEdge edge hint to specify which edge of @rect to try
+ *     to align @menu to
+ * @rect: (allow-none): an attachment rectangle hint used for anchoring the
+ *     @menu to, or %NULL to use @parent_menu_item's allocation instead
  * @func: (allow-none): a user supplied function used to position the menu,
  *     or %NULL
  * @data: (allow-none): user supplied data to be passed to @func
@@ -1496,8 +1500,9 @@ associate_menu_grab_transfer_window (GtkMenu *menu)
  * Applications can use this function to display context-sensitive menus,
  * and will typically supply %NULL for the @parent_menu_shell,
  * @parent_menu_item, @func, @data and @destroy parameters. The default
- * menu positioning function will position the menu at the current position
- * of @device (or its corresponding pointer).
+ * menu positioning function will try to position the menu along one of
+ * @rect's edges specified by @edge, otherwise it will position the menu at
+ * the current position of @device (or its corresponding pointer).
  *
  * The @button parameter should be the mouse button pressed to initiate
  * the menu popup. If the menu popup was initiated by something other than
@@ -1511,18 +1516,20 @@ associate_menu_grab_transfer_window (GtkMenu *menu)
  * Only if no such event is available, gtk_get_current_event_time() can
  * be used instead.
  *
- * Since: 3.0
+ * Since: 3.18
  */
 void
-gtk_menu_popup_for_device (GtkMenu             *menu,
-                           GdkDevice           *device,
-                           GtkWidget           *parent_menu_shell,
-                           GtkWidget           *parent_menu_item,
-                           GtkMenuPositionFunc  func,
-                           gpointer             data,
-                           GDestroyNotify       destroy,
-                           guint                button,
-                           guint32              activate_time)
+gtk_menu_popup_against (GtkMenu             *menu,
+                        GdkDevice           *device,
+                        GtkWidget           *parent_menu_shell,
+                        GtkWidget           *parent_menu_item,
+                        GdkAttachmentEdge    edge,
+                        const GdkRectangle  *rect,
+                        GtkMenuPositionFunc  func,
+                        gpointer             data,
+                        GDestroyNotify       destroy,
+                        guint                button,
+                        guint32              activate_time)
 {
   GtkMenuPrivate *priv = menu->priv;
   GtkWidget *widget;
@@ -1534,6 +1541,9 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
   GtkWidget *parent_toplevel;
   GdkDevice *keyboard, *pointer, *source_device = NULL;
   GdkDisplay *display;
+  GdkWindow *menu_window;
+  GdkWindow *parent_window;
+  GdkRectangle allocation;
 
   g_return_if_fail (GTK_IS_MENU (menu));
   g_return_if_fail (device == NULL || GDK_IS_DEVICE (device));
@@ -1726,6 +1736,25 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
       source_device && gdk_device_get_source (source_device) == GDK_SOURCE_TOUCHSCREEN)
     gtk_menu_shell_select_first (menu_shell, TRUE);
 
+  menu_window = gtk_widget_get_window (priv->toplevel);
+
+  if (menu_window)
+    {
+      if (rect)
+        gdk_window_set_attachment_rectangle (menu_window, edge, rect);
+      else if (edge != GDK_ATTACHMENT_EDGE_NONE && GTK_IS_WIDGET (parent_menu_item))
+        {
+          parent_window = gtk_widget_get_window (parent_menu_item);
+
+          if (parent_window)
+            {
+              gtk_widget_get_allocation (parent_menu_item, &allocation);
+              gdk_window_get_root_coords (parent_window, allocation.x, allocation.y, &allocation.x, &allocation.y);
+              gdk_window_set_attachment_rectangle (menu_window, edge, &allocation);
+            }
+        }
+    }
+
   /* Once everything is set up correctly, map the toplevel */
   gtk_widget_show (priv->toplevel);
 
@@ -1745,6 +1774,69 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
     _gtk_menu_shell_set_keyboard_mode (menu_shell, TRUE);
 
   _gtk_menu_shell_update_mnemonics (menu_shell);
+}
+
+/**
+ * gtk_menu_popup_for_device:
+ * @menu: a #GtkMenu
+ * @device: (allow-none): a #GdkDevice
+ * @parent_menu_shell: (allow-none): the menu shell containing the triggering
+ *     menu item, or %NULL
+ * @parent_menu_item: (allow-none): the menu item whose activation triggered
+ *     the popup, or %NULL
+ * @func: (allow-none): a user supplied function used to position the menu,
+ *     or %NULL
+ * @data: (allow-none): user supplied data to be passed to @func
+ * @destroy: (allow-none): destroy notify for @data
+ * @button: the mouse button which was pressed to initiate the event
+ * @activate_time: the time at which the activation event occurred
+ *
+ * Displays a menu and makes it available for selection.
+ *
+ * Applications can use this function to display context-sensitive menus,
+ * and will typically supply %NULL for the @parent_menu_shell,
+ * @parent_menu_item, @func, @data and @destroy parameters. The default
+ * menu positioning function will position the menu at the current position
+ * of @device (or its corresponding pointer).
+ *
+ * The @button parameter should be the mouse button pressed to initiate
+ * the menu popup. If the menu popup was initiated by something other than
+ * a mouse button press, such as a mouse button release or a keypress,
+ * @button should be 0.
+ *
+ * The @activate_time parameter is used to conflict-resolve initiation of
+ * concurrent requests for mouse/keyboard grab requests. To function
+ * properly, this needs to be the time stamp of the user event (such as
+ * a mouse click or key press) that caused the initiation of the popup.
+ * Only if no such event is available, gtk_get_current_event_time() can
+ * be used instead.
+ *
+ * Since: 3.0
+ */
+void
+gtk_menu_popup_for_device (GtkMenu             *menu,
+                           GdkDevice           *device,
+                           GtkWidget           *parent_menu_shell,
+                           GtkWidget           *parent_menu_item,
+                           GtkMenuPositionFunc  func,
+                           gpointer             data,
+                           GDestroyNotify       destroy,
+                           guint                button,
+                           guint32              activate_time)
+{
+  g_return_if_fail (GTK_IS_MENU (menu));
+
+  gtk_menu_popup_against (menu,
+                          device,
+                          parent_menu_shell,
+                          parent_menu_item,
+                          GDK_ATTACHMENT_EDGE_NONE,
+                          NULL,
+                          func,
+                          data,
+                          destroy,
+                          button,
+                          activate_time);
 }
 
 /**
