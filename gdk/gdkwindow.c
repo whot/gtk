@@ -11339,8 +11339,8 @@ gdk_window_show_window_menu (GdkWindow *window,
 /**
  * gdk_window_set_attachment_rectangle:
  * @window: a #GdkWindow
- * @edge: the preferred edge to attach to
  * @rect: (allow-none): a #GdkRectangle or %NULL
+ * @options: #GdkAttachmentOptions
  *
  * An attachment rectangle is a rectangle that a window needs to be
  * aligned with.
@@ -11351,9 +11351,9 @@ gdk_window_show_window_menu (GdkWindow *window,
  * screen.
  */
 void
-gdk_window_set_attachment_rectangle (GdkWindow          *window,
-                                     GdkAttachmentEdge   edge,
-                                     const GdkRectangle *rect)
+gdk_window_set_attachment_rectangle (GdkWindow            *window,
+                                     const GdkRectangle   *rect,
+                                     GdkAttachmentOptions  options)
 {
   GdkWindowImplClass *impl_class;
 
@@ -11363,5 +11363,5 @@ gdk_window_set_attachment_rectangle (GdkWindow          *window,
   impl_class = GDK_WINDOW_IMPL_GET_CLASS (window->impl);
 
   if (impl_class->set_attachment_rectangle)
-    impl_class->set_attachment_rectangle (window, edge, rect);
+    impl_class->set_attachment_rectangle (window, rect, options);
 }

@@ -320,29 +320,41 @@ typedef enum
 } GdkWindowEdge;
 
 /**
- * GdkAttachmentEdge:
- * @GDK_ATTACHMENT_EDGE_NONE: no edge.
- * @GDK_ATTACHMENT_EDGE_TOP: the top edge.
- * @GDK_ATTACHMENT_EDGE_BOTTOM: the bottom edge.
- * @GDK_ATTACHMENT_EDGE_LEFT: the left edge.
- * @GDK_ATTACHMENT_EDGE_RIGHT: the right edge.
- * @GDK_ATTACHMENT_EDGE_HORIZONTAL: the top or bottom edge.
- * @GDK_ATTACHMENT_EDGE_VERTICAL: the left or right edge.
- * @GDK_ATTACHMENT_EDGE_ANY: any edge.
+ * GdkAttachmentOptions:
+ * @GDK_ATTACHMENT_ATTACH_NO_EDGE: center.
+ * @GDK_ATTACHMENT_ATTACH_TOP_EDGE: place above.
+ * @GDK_ATTACHMENT_ATTACH_LEFT_EDGE: place to the left.
+ * @GDK_ATTACHMENT_ATTACH_RIGHT_EDGE: place to the right.
+ * @GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE: place below.
+ * @GDK_ATTACHMENT_ATTACH_ANY_EDGE: place along any edge.
+ * @GDK_ATTACHMENT_ATTACH_MASK: bit mask.
+ * @GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE: use opposite edge if lacking space.
+ * @GDK_ATTACHMENT_ALIGN_TOP_EDGES: align top edges.
+ * @GDK_ATTACHMENT_ALIGN_LEFT_EDGES: align left edges.
+ * @GDK_ATTACHMENT_ALIGN_RIGHT_EDGES: align right edges.
+ * @GDK_ATTACHMENT_ALIGN_BOTTOM_EDGES: align bottom edges.
+ * @GDK_ATTACHMENT_ALIGN_MASK: bit mask.
+ * @GDK_ATTACHMENT_PUSH_IN: push the menu back within monitor boundaries.
  *
- * Determines an edge of an attachment rectangle.
+ * Hints for placing a popup menu relative to an attachment rectangle.
  */
 typedef enum
 {
-  GDK_ATTACHMENT_EDGE_NONE       = 0,
-  GDK_ATTACHMENT_EDGE_TOP        = 1 << 0,
-  GDK_ATTACHMENT_EDGE_BOTTOM     = 1 << 1,
-  GDK_ATTACHMENT_EDGE_LEFT       = 1 << 2,
-  GDK_ATTACHMENT_EDGE_RIGHT      = 1 << 3,
-  GDK_ATTACHMENT_EDGE_HORIZONTAL = GDK_ATTACHMENT_EDGE_TOP | GDK_ATTACHMENT_EDGE_BOTTOM,
-  GDK_ATTACHMENT_EDGE_VERTICAL   = GDK_ATTACHMENT_EDGE_LEFT | GDK_ATTACHMENT_EDGE_RIGHT,
-  GDK_ATTACHMENT_EDGE_ANY        = GDK_ATTACHMENT_EDGE_HORIZONTAL | GDK_ATTACHMENT_EDGE_VERTICAL
-} GdkAttachmentEdge;
+  GDK_ATTACHMENT_ATTACH_NO_EDGE       = 0x1,
+  GDK_ATTACHMENT_ATTACH_TOP_EDGE      = 0x2,
+  GDK_ATTACHMENT_ATTACH_LEFT_EDGE     = 0x3,
+  GDK_ATTACHMENT_ATTACH_RIGHT_EDGE    = 0x4,
+  GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE   = 0x5,
+  GDK_ATTACHMENT_ATTACH_ANY_EDGE      = 0x6,
+  GDK_ATTACHMENT_ATTACH_MASK          = 0x7,
+  GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE = 0x8,
+  GDK_ATTACHMENT_ALIGN_TOP_EDGES      = 0x10,
+  GDK_ATTACHMENT_ALIGN_LEFT_EDGES     = 0x10,
+  GDK_ATTACHMENT_ALIGN_RIGHT_EDGES    = 0x20,
+  GDK_ATTACHMENT_ALIGN_BOTTOM_EDGES   = 0x20,
+  GDK_ATTACHMENT_ALIGN_MASK           = 0x30,
+  GDK_ATTACHMENT_PUSH_IN              = 0x40
+} GdkAttachmentOptions;
 
 /**
  * GdkFullscreenMode:
@@ -1147,9 +1159,9 @@ GdkGLContext * gdk_window_create_gl_context    (GdkWindow      *window,
                                                 GError        **error);
 
 GDK_AVAILABLE_IN_3_18
-void       gdk_window_set_attachment_rectangle (GdkWindow          *window,
-                                                GdkAttachmentEdge   edge,
-                                                const GdkRectangle *rect);
+void       gdk_window_set_attachment_rectangle (GdkWindow            *window,
+                                                const GdkRectangle   *rect,
+                                                GdkAttachmentOptions  options);
 
 G_END_DECLS
 

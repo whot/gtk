@@ -300,9 +300,10 @@ struct _GdkWindowImplClass
                                            GError        **error);
   void         (*invalidate_for_new_frame)(GdkWindow      *window,
                                            cairo_region_t *update_area);
-  void         (*set_attachment_rectangle) (GdkWindow          *window,
-                                            GdkAttachmentEdge   edge,
-                                            const GdkRectangle *rect);
+
+  void         (*set_attachment_rectangle) (GdkWindow            *window,
+                                            const GdkRectangle   *rect,
+                                            GdkAttachmentOptions  options);
 };
 
 /* Interface Functions */
