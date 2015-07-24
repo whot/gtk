@@ -1484,8 +1484,7 @@ associate_menu_grab_transfer_window (GtkMenu *menu)
  *     menu item, or %NULL
  * @parent_menu_item: (allow-none): the menu item whose activation triggered
  *     the popup, or %NULL
- * @edge: a #GdkAttachmentEdge edge hint to specify which edge of @rect to try
- *     to align @menu to
+ * @edge: a #GdkAttachmentOptions hint to specify how to align @menu to @rect
  * @rect: (allow-none): an attachment rectangle hint used for anchoring the
  *     @menu to, or %NULL to use @parent_menu_item's allocation instead
  * @func: (allow-none): a user supplied function used to position the menu,
@@ -1519,17 +1518,17 @@ associate_menu_grab_transfer_window (GtkMenu *menu)
  * Since: 3.18
  */
 void
-gtk_menu_popup_against (GtkMenu             *menu,
-                        GdkDevice           *device,
-                        GtkWidget           *parent_menu_shell,
-                        GtkWidget           *parent_menu_item,
-                        GdkAttachmentEdge    edge,
-                        const GdkRectangle  *rect,
-                        GtkMenuPositionFunc  func,
-                        gpointer             data,
-                        GDestroyNotify       destroy,
-                        guint                button,
-                        guint32              activate_time)
+gtk_menu_popup_against (GtkMenu              *menu,
+                        GdkDevice            *device,
+                        GtkWidget            *parent_menu_shell,
+                        GtkWidget            *parent_menu_item,
+                        const GdkRectangle   *rect,
+                        GdkAttachmentOptions  options,
+                        GtkMenuPositionFunc   func,
+                        gpointer              data,
+                        GDestroyNotify        destroy,
+                        guint                 button,
+                        guint32               activate_time)
 {
   GtkMenuPrivate *priv = menu->priv;
   GtkWidget *widget;
@@ -1741,8 +1740,8 @@ gtk_menu_popup_against (GtkMenu             *menu,
   if (menu_window)
     {
       if (rect)
-        gdk_window_set_attachment_rectangle (menu_window, edge, rect);
-      else if (edge != GDK_ATTACHMENT_EDGE_NONE && GTK_IS_WIDGET (parent_menu_item))
+        gdk_window_set_attachment_rectangle (menu_window, rect, options);
+      else if ((options & GDK_ATTACHMENT_ATTACH_MASK) && GTK_IS_WIDGET (parent_menu_item))
         {
           parent_window = gtk_widget_get_window (parent_menu_item);
 
@@ -1750,7 +1749,7 @@ gtk_menu_popup_against (GtkMenu             *menu,
             {
               gtk_widget_get_allocation (parent_menu_item, &allocation);
               gdk_window_get_root_coords (parent_window, allocation.x, allocation.y, &allocation.x, &allocation.y);
-              gdk_window_set_attachment_rectangle (menu_window, edge, &allocation);
+              gdk_window_set_attachment_rectangle (menu_window, &allocation, options);
             }
         }
     }
@@ -1830,8 +1829,8 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
                           device,
                           parent_menu_shell,
                           parent_menu_item,
-                          GDK_ATTACHMENT_EDGE_NONE,
                           NULL,
+                          0,
                           func,
                           data,
                           destroy,
