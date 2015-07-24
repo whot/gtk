@@ -1898,6 +1898,7 @@ gtk_menu_item_real_popup_submenu (GtkWidget *widget,
 {
   GtkMenuItem *menu_item = GTK_MENU_ITEM (widget);
   GtkMenuItemPrivate *priv = menu_item->priv;
+  GdkAttachmentOptions attach_options;
   GtkWidget *parent;
 
   parent = gtk_widget_get_parent (widget);
@@ -1905,7 +1906,6 @@ gtk_menu_item_real_popup_submenu (GtkWidget *widget,
   if (gtk_widget_is_sensitive (priv->submenu) && parent)
     {
       gboolean take_focus;
-      GtkMenuPositionFunc menu_position_func;
 
       take_focus = gtk_menu_shell_get_take_focus (GTK_MENU_SHELL (parent));
       gtk_menu_shell_set_take_focus (GTK_MENU_SHELL (priv->submenu), take_focus);
@@ -1926,24 +1926,41 @@ gtk_menu_item_real_popup_submenu (GtkWidget *widget,
                              "gtk-menu-exact-popup-time", NULL);
         }
 
-      /* gtk_menu_item_position_menu positions the submenu from the
-       * menuitems position. If the menuitem doesn't have a window,
-       * that doesn't work. In that case we use the default
-       * positioning function instead which places the submenu at the
-       * mouse cursor.
-       */
-      if (gtk_widget_get_window (widget))
-        menu_position_func = gtk_menu_item_position_menu;
-      else
-        menu_position_func = NULL;
+      switch (priv->submenu_placement)
+        {
+          case GTK_TOP_BOTTOM:
+            attach_options = GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE |
+                             GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
 
-      gtk_menu_popup (GTK_MENU (priv->submenu),
-                      parent,
-                      widget,
-                      menu_position_func,
-                      menu_item,
-                      GTK_MENU_SHELL (parent)->priv->button,
-                      0);
+            if (gtk_widget_get_direction (widget) != GTK_TEXT_DIR_RTL)
+              attach_options |= GDK_ATTACHMENT_ALIGN_LEFT_EDGES;
+            else
+              attach_options |= GDK_ATTACHMENT_ALIGN_RIGHT_EDGES;
+
+            break;
+          case GTK_LEFT_RIGHT:
+            attach_options = GDK_ATTACHMENT_ALIGN_TOP_EDGES |
+                             GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
+
+            if (gtk_widget_get_direction (widget) != GTK_TEXT_DIR_RTL)
+              attach_options |= GDK_ATTACHMENT_ATTACH_RIGHT_EDGE;
+            else
+              attach_options |= GDK_ATTACHMENT_ATTACH_LEFT_EDGE;
+
+            break;
+        }
+
+      gtk_menu_popup_against (GTK_MENU (priv->submenu),
+                              NULL,
+                              parent,
+                              widget,
+                              NULL,
+                              attach_options,
+                              NULL,
+                              NULL,
+                              NULL,
+                              GTK_MENU_SHELL (parent)->priv->button,
+                              0);
     }
 
   /* Enable themeing of the parent menu item depending on whether
