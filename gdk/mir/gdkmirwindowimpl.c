@@ -925,7 +925,23 @@ static void
 gdk_mir_window_impl_get_frame_extents (GdkWindow    *window,
                                        GdkRectangle *rect)
 {
-  //g_printerr ("gdk_mir_window_impl_get_frame_extents window=%p\n", window);
+  GdkMirWindowImpl *impl = GDK_MIR_WINDOW_IMPL (window->impl);
+
+  if (!rect)
+    return;
+
+  rect->x = 0;
+  rect->y = 0;
+  rect->width = window->width;
+  rect->height = window->height;
+
+  while (impl->transient_for)
+    {
+      rect->x += impl->transient_x;
+      rect->y += impl->transient_y;
+      window = impl->transient_for;
+      impl = GDK_MIR_WINDOW_IMPL (window->impl);
+    }
 }
 
 static void
