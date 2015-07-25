@@ -1543,6 +1543,8 @@ gtk_menu_popup_against (GtkMenu              *menu,
   GdkWindow *menu_window;
   GdkWindow *parent_window;
   GdkRectangle allocation;
+  gint x;
+  gint y;
 
   g_return_if_fail (GTK_IS_MENU (menu));
   g_return_if_fail (device == NULL || GDK_IS_DEVICE (device));
@@ -1747,8 +1749,11 @@ gtk_menu_popup_against (GtkMenu              *menu,
 
           if (parent_window)
             {
+              gdk_window_get_root_origin (parent_window, &x, &y);
               gtk_widget_get_allocation (parent_menu_item, &allocation);
               gdk_window_get_root_coords (parent_window, allocation.x, allocation.y, &allocation.x, &allocation.y);
+              allocation.x -= x;
+              allocation.y -= y;
               gdk_window_set_attachment_rectangle (menu_window, &allocation, options);
             }
         }
