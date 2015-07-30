@@ -51,6 +51,10 @@ struct _GtkMenuPrivate
   gint                position_x;
   gint                position_y;
 
+  gboolean has_attach_rect;
+  GdkRectangle attach_rect;
+  GdkAttachmentOptions attach_options;
+
   guint toggle_size;
   guint accel_size;
 

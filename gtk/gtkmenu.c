@@ -1540,11 +1540,6 @@ gtk_menu_popup_against (GtkMenu              *menu,
   GtkWidget *parent_toplevel;
   GdkDevice *keyboard, *pointer, *source_device = NULL;
   GdkDisplay *display;
-  GdkWindow *menu_window;
-  GdkWindow *parent_window;
-  GdkRectangle allocation;
-  gint x;
-  gint y;
 
   g_return_if_fail (GTK_IS_MENU (menu));
   g_return_if_fail (device == NULL || GDK_IS_DEVICE (device));
@@ -1718,6 +1713,16 @@ gtk_menu_popup_against (GtkMenu              *menu,
   priv->position_func_data_destroy = destroy;
   menu_shell->priv->activate_time = activate_time;
 
+  if (rect)
+    {
+      priv->has_attach_rect = TRUE;
+      priv->attach_rect = *rect;
+    }
+  else
+    priv->has_attach_rect = FALSE;
+
+  priv->attach_options = options;
+
   /* We need to show the menu here rather in the init function
    * because code expects to be able to tell if the menu is onscreen
    * by looking at gtk_widget_get_visible (menu)
@@ -1736,28 +1741,6 @@ gtk_menu_popup_against (GtkMenu              *menu,
   if (!menu_shell->priv->active_menu_item &&
       source_device && gdk_device_get_source (source_device) == GDK_SOURCE_TOUCHSCREEN)
     gtk_menu_shell_select_first (menu_shell, TRUE);
-
-  menu_window = gtk_widget_get_window (priv->toplevel);
-
-  if (menu_window)
-    {
-      if (rect)
-        gdk_window_set_attachment_rectangle (menu_window, rect, options);
-      else if ((options & GDK_ATTACHMENT_ATTACH_MASK) && GTK_IS_WIDGET (parent_menu_item))
-        {
-          parent_window = gtk_widget_get_window (parent_menu_item);
-
-          if (parent_window)
-            {
-              gdk_window_get_root_origin (parent_window, &x, &y);
-              gtk_widget_get_allocation (parent_menu_item, &allocation);
-              gdk_window_get_root_coords (parent_window, allocation.x, allocation.y, &allocation.x, &allocation.y);
-              allocation.x -= x;
-              allocation.y -= y;
-              gdk_window_set_attachment_rectangle (menu_window, &allocation, options);
-            }
-        }
-    }
 
   /* Once everything is set up correctly, map the toplevel */
   gtk_widget_show (priv->toplevel);
@@ -4546,6 +4529,36 @@ gtk_menu_position (GtkMenu  *menu,
   GdkRectangle monitor;
   GdkDevice *pointer;
   GtkBorder border;
+  GdkWindow *menu_window;
+  GdkWindow *parent_window;
+  GdkRectangle allocation;
+
+  menu_window = gtk_widget_get_window (priv->toplevel);
+
+  if (menu_window)
+    {
+      if (priv->has_attach_rect)
+        {
+          gdk_window_set_attachment_rectangle (menu_window, &priv->attach_rect, priv->attach_options);
+          return;
+        }
+      else if ((priv->attach_options & GDK_ATTACHMENT_ATTACH_MASK) && GTK_IS_WIDGET (priv->parent_menu_item))
+        {
+          parent_window = gtk_widget_get_window (priv->parent_menu_item);
+
+          if (parent_window)
+            {
+              gdk_window_get_root_origin (parent_window, &x, &y);
+              gdk_window_get_root_origin (gdk_window_get_parent (menu_window), &x, &y);
+              gtk_widget_get_allocation (priv->parent_menu_item, &allocation);
+              gdk_window_get_root_coords (parent_window, allocation.x, allocation.y, &allocation.x, &allocation.y);
+              allocation.x -= x;
+              allocation.y -= y;
+              gdk_window_set_attachment_rectangle (menu_window, &allocation, priv->attach_options);
+              return;
+            }
+        }
+    }
 
   widget = GTK_WIDGET (menu);
 
