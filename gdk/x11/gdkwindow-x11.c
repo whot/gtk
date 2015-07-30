@@ -5682,6 +5682,14 @@ gdk_x11_window_show_window_menu (GdkWindow *window,
 }
 
 static void
+gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
+                                         const GdkRectangle   *rect,
+                                         GdkAttachmentOptions  options)
+{
+  gdk_window_move (window, rect->x, rect->y + rect->height);
+}
+
+static void
 gdk_window_impl_x11_class_init (GdkWindowImplX11Class *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -5771,4 +5779,5 @@ gdk_window_impl_x11_class_init (GdkWindowImplX11Class *klass)
   impl_class->create_gl_context = gdk_x11_window_create_gl_context;
   impl_class->invalidate_for_new_frame = gdk_x11_window_invalidate_for_new_frame;
   impl_class->get_unscaled_size = gdk_x11_window_get_unscaled_size;
+  impl_class->set_attachment_rectangle = gdk_x11_window_set_attachment_rectangle;
 }
