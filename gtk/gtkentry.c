@@ -8943,8 +8943,8 @@ gtk_entry_get_icon_stock (GtkEntry             *entry,
  * no icon or if the icon was set by some other method (e.g., by
  * pixbuf, stock or gicon).
  *
- * Returns: An icon name, or %NULL if no icon is set or if the icon
- *          wasn’t set from an icon name
+ * Returns (nullable) (transfer none): An icon name, or %NULL if no icon is set
+ *     or if the icon wasn't set from an icon name
  *
  * Since: 2.16
  */

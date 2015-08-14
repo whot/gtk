@@ -5012,9 +5012,9 @@ gtk_places_sidebar_list_shortcuts (GtkPlacesSidebar *sidebar)
  * and returns one of them.  This function is used by #GtkFileChooser to implement
  * the “Alt-1”, “Alt-2”, etc. shortcuts, which activate the cooresponding bookmark.
  *
- * Returns: (transfer full): The bookmark specified by the index @n, or
- * #NULL if no such index exist.  Note that the indices start at 0, even though
- * the file chooser starts them with the keyboard shortcut “Alt-1”.
+ * Returns: (nullable) (transfer full): The bookmark specified by the index @n, or
+ * %NULL if no such index exist.  Note that the indices start at 0, even though
+ * the file chooser starts them with the keyboard shortcut "Alt-1".
  *
  * Since: 3.10
  */

@@ -2053,7 +2053,7 @@ gtk_label_set_mnemonic_widget (GtkLabel  *label,
  * Retrieves the target of the mnemonic (keyboard shortcut) of this
  * label. See gtk_label_set_mnemonic_widget().
  *
- * Returns: (transfer none): the target of the label’s mnemonic,
+ * Returns: (nullable) (transfer none): the target of the label’s mnemonic,
  *     or %NULL if none has been set and the default algorithm will be used.
  **/
 GtkWidget *
