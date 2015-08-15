@@ -5683,10 +5683,26 @@ gdk_x11_window_show_window_menu (GdkWindow *window,
 
 static void
 gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
+                                         const GdkPoint       *origin,
                                          const GdkRectangle   *rect,
                                          GdkAttachmentOptions  options)
 {
-  gdk_window_move (window, rect->x, rect->y + rect->height);
+  gint x;
+  gint y;
+
+  if (!rect)
+    return;
+
+  x = rect->x;
+  y = rect->y + rect->height;
+
+  if (origin)
+    {
+      x += origin->x;
+      y += origin->y;
+    }
+
+  gdk_window_move (window, x, y);
 }
 
 static void
