@@ -1460,6 +1460,7 @@ gdk_mir_window_impl_invalidate_for_new_frame (GdkWindow *window,
 
 static void
 gdk_mir_window_impl_set_attachment_rectangle (GdkWindow            *window,
+                                              const GdkPoint       *origin,
                                               const GdkRectangle   *rect,
                                               GdkAttachmentOptions  options)
 {
