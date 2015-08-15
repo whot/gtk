@@ -11339,11 +11339,13 @@ gdk_window_show_window_menu (GdkWindow *window,
 /**
  * gdk_window_set_attachment_rectangle:
  * @window: a #GdkWindow
+ * @origin: (allow-none): a #GdkPoint or %NULL
  * @rect: (allow-none): a #GdkRectangle or %NULL
  * @options: #GdkAttachmentOptions
  *
  * An attachment rectangle is a rectangle that a window needs to be
- * aligned with.
+ * aligned with. The rectangle is relative to the specified screen
+ * origin.
  *
  * The window manager might want this information to do more active
  * positioning of a window. For example, menus and tooltips might
@@ -11352,6 +11354,7 @@ gdk_window_show_window_menu (GdkWindow *window,
  */
 void
 gdk_window_set_attachment_rectangle (GdkWindow            *window,
+                                     const GdkPoint       *origin,
                                      const GdkRectangle   *rect,
                                      GdkAttachmentOptions  options)
 {
@@ -11363,5 +11366,5 @@ gdk_window_set_attachment_rectangle (GdkWindow            *window,
   impl_class = GDK_WINDOW_IMPL_GET_CLASS (window->impl);
 
   if (impl_class->set_attachment_rectangle)
-    impl_class->set_attachment_rectangle (window, rect, options);
+    impl_class->set_attachment_rectangle (window, origin, rect, options);
 }

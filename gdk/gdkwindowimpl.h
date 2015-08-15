@@ -302,6 +302,7 @@ struct _GdkWindowImplClass
                                            cairo_region_t *update_area);
 
   void         (*set_attachment_rectangle) (GdkWindow            *window,
+                                            const GdkPoint       *origin,
                                             const GdkRectangle   *rect,
                                             GdkAttachmentOptions  options);
 };

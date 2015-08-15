@@ -1160,6 +1160,7 @@ GdkGLContext * gdk_window_create_gl_context    (GdkWindow      *window,
 
 GDK_AVAILABLE_IN_3_18
 void       gdk_window_set_attachment_rectangle (GdkWindow            *window,
+                                                const GdkPoint       *origin,
                                                 const GdkRectangle   *rect,
                                                 GdkAttachmentOptions  options);
 
