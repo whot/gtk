@@ -4531,6 +4531,7 @@ gtk_menu_position (GtkMenu  *menu,
   GtkBorder border;
   GdkWindow *menu_window;
   GdkWindow *parent_window;
+  GdkPoint parent_origin;
   GdkRectangle allocation;
 
   menu_window = gtk_widget_get_window (priv->toplevel);
@@ -4539,7 +4540,18 @@ gtk_menu_position (GtkMenu  *menu,
     {
       if (priv->has_attach_rect)
         {
-          gdk_window_set_attachment_rectangle (menu_window, &priv->attach_rect, priv->attach_options);
+          parent_origin.x = 0;
+          parent_origin.y = 0;
+
+          if (GTK_IS_WIDGET (priv->parent_menu_item))
+            {
+              parent_window = gtk_widget_get_window (priv->parent_menu_item);
+
+              if (parent_window)
+                gdk_window_get_root_origin (parent_window, &parent_origin.x, &parent_origin.y);
+            }
+
+          gdk_window_set_attachment_rectangle (menu_window, &parent_origin, &priv->attach_rect, priv->attach_options);
           return;
         }
       else if ((priv->attach_options & GDK_ATTACHMENT_ATTACH_MASK) && GTK_IS_WIDGET (priv->parent_menu_item))
@@ -4548,13 +4560,12 @@ gtk_menu_position (GtkMenu  *menu,
 
           if (parent_window)
             {
-              gdk_window_get_root_origin (parent_window, &x, &y);
-              gdk_window_get_root_origin (gdk_window_get_parent (menu_window), &x, &y);
+              gdk_window_get_root_origin (parent_window, &parent_origin.x, &parent_origin.y);
               gtk_widget_get_allocation (priv->parent_menu_item, &allocation);
               gdk_window_get_root_coords (parent_window, allocation.x, allocation.y, &allocation.x, &allocation.y);
-              allocation.x -= x;
-              allocation.y -= y;
-              gdk_window_set_attachment_rectangle (menu_window, &allocation, priv->attach_options);
+              allocation.x -= parent_origin.x;
+              allocation.y -= parent_origin.y;
+              gdk_window_set_attachment_rectangle (menu_window, &parent_origin, &allocation, priv->attach_options);
               return;
             }
         }
