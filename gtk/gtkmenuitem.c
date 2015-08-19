@@ -2459,7 +2459,7 @@ gtk_menu_item_set_accel_path (GtkMenuItem *menu_item,
  *
  * See gtk_menu_item_set_accel_path() for details.
  *
- * Returns (nullable) (transfer none): the accelerator path corresponding to
+ * Returns: (nullable) (transfer none): the accelerator path corresponding to
  *     this menu item’s functionality, or %NULL if not set
  *
  * Since: 2.14
