@@ -8833,7 +8833,7 @@ gtk_entry_get_icon_activatable (GtkEntry             *entry,
  * method will work regardless of whether the icon was set using a
  * #GdkPixbuf, a #GIcon, a stock item, or an icon name.
  *
- * Returns: (transfer none): A #GdkPixbuf, or %NULL if no icon is
+ * Returns: (nullable) (transfer none): A #GdkPixbuf, or %NULL if no icon is
  *     set for this position.
  *
  * Since: 2.16
@@ -8875,7 +8875,7 @@ gtk_entry_get_icon_pixbuf (GtkEntry             *entry,
  * no icon or if the icon was set by some other method (e.g., by
  * stock, pixbuf, or icon name).
  *
- * Returns: (transfer none): A #GIcon, or %NULL if no icon is set
+ * Returns: (nullable) (transfer none): A #GIcon, or %NULL if no icon is set
  *     or if the icon is not a #GIcon
  *
  * Since: 2.16
@@ -10584,8 +10584,8 @@ gtk_entry_set_cursor_hadjustment (GtkEntry      *entry,
  * Retrieves the horizontal cursor adjustment for the entry. 
  * See gtk_entry_set_cursor_hadjustment().
  *
- * Returns: (transfer none): the horizontal cursor adjustment, or %NULL
- *   if none has been set.
+ * Returns: (nullable) (transfer none): the horizontal cursor adjustment,
+ *   or %NULL if none has been set.
  *
  * Since: 2.12
  */
@@ -11110,7 +11110,7 @@ gtk_entry_set_attributes (GtkEntry      *entry,
  * Gets the attribute list that was set on the entry using
  * gtk_entry_set_attributes(), if any.
  *
- * Returns: (transfer none): the attribute list, or %NULL
+ * Returns: (nullable) (transfer none): the attribute list, or %NULL
  *     if none was set.
  *
  * Since: 3.6
