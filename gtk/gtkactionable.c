@@ -86,7 +86,7 @@ gtk_actionable_default_init (GtkActionableInterface *iface)
  *
  * See gtk_actionable_set_action_name() for more information.
  *
- * Returns (nullable): the action name, or %NULL if none is set
+ * Returns: (nullable): the action name, or %NULL if none is set
  *
  * Since: 3.4
  **/
