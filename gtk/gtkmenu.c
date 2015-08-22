@@ -4538,6 +4538,8 @@ gtk_menu_position (GtkMenu  *menu,
 
   if (menu_window)
     {
+      _gtk_window_get_shadow_width (GTK_WINDOW (priv->toplevel), &border);
+
       if (priv->has_attach_rect)
         {
           parent_origin.x = 0;
@@ -4551,7 +4553,37 @@ gtk_menu_position (GtkMenu  *menu,
                 gdk_window_get_root_origin (parent_window, &parent_origin.x, &parent_origin.y);
             }
 
-          gdk_window_set_attachment_rectangle (menu_window, &parent_origin, &priv->attach_rect, priv->attach_options);
+          allocation = priv->attach_rect;
+
+          switch (priv->attach_options & GDK_ATTACHMENT_ATTACH_MASK)
+            {
+            case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
+            case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
+              allocation.y += border.bottom;
+              allocation.height -= border.top + border.bottom;
+
+              if (priv->attach_options & GDK_ATTACHMENT_ALIGN_MASK)
+                {
+                  allocation.x -= border.left;
+                  allocation.width += border.left + border.right;
+                }
+
+              break;
+            case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
+            case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
+              allocation.x += border.right;
+              allocation.width -= border.left + border.right;
+
+              if (priv->attach_options & GDK_ATTACHMENT_ALIGN_MASK)
+                {
+                  allocation.y -= border.top;
+                  allocation.height += border.top + border.bottom;
+                }
+
+              break;
+            }
+
+          gdk_window_set_attachment_rectangle (menu_window, &parent_origin, &allocation, priv->attach_options);
           return;
         }
       else if ((priv->attach_options & GDK_ATTACHMENT_ATTACH_MASK) && GTK_IS_WIDGET (priv->parent_menu_item))
@@ -4565,6 +4597,35 @@ gtk_menu_position (GtkMenu  *menu,
               gdk_window_get_root_coords (parent_window, allocation.x, allocation.y, &allocation.x, &allocation.y);
               allocation.x -= parent_origin.x;
               allocation.y -= parent_origin.y;
+
+              switch (priv->attach_options & GDK_ATTACHMENT_ATTACH_MASK)
+                {
+                case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
+                case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
+                  allocation.y += border.bottom;
+                  allocation.height -= border.top + border.bottom;
+
+                  if (priv->attach_options & GDK_ATTACHMENT_ALIGN_MASK)
+                    {
+                      allocation.x -= border.left;
+                      allocation.width += border.left + border.right;
+                    }
+
+                  break;
+                case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
+                case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
+                  allocation.x += border.right;
+                  allocation.width -= border.left + border.right;
+
+                  if (priv->attach_options & GDK_ATTACHMENT_ALIGN_MASK)
+                    {
+                      allocation.y -= border.top;
+                      allocation.height += border.top + border.bottom;
+                    }
+
+                  break;
+                }
+
               gdk_window_set_attachment_rectangle (menu_window, &parent_origin, &allocation, priv->attach_options);
               return;
             }
