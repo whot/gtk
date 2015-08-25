@@ -4568,6 +4568,7 @@ gtk_menu_position (GtkMenu  *menu,
   GdkPoint parent_origin;
   GdkRectangle allocation;
 
+  gtk_widget_realize (priv->toplevel);
   menu_window = gtk_widget_get_window (priv->toplevel);
 
   if (menu_window)
