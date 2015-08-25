@@ -5693,8 +5693,25 @@ gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
   if (!rect)
     return;
 
-  x = rect->x;
-  y = rect->y + rect->height;
+  switch (options & GDK_ATTACHMENT_ATTACH_MASK)
+    {
+    case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
+      x = rect->x;
+      y = rect->y - gdk_window_get_height (window);
+      break;
+    case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
+      x = rect->x - gdk_window_get_width (window);
+      y = rect->y;
+      break;
+    case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
+      x = rect->x + rect->width;
+      y = rect->y;
+      break;
+    case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
+      x = rect->x;
+      y = rect->y + rect->height;
+      break;
+    }
 
   if (origin)
     {
