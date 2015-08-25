@@ -4516,6 +4516,40 @@ gtk_menu_deactivate (GtkMenuShell *menu_shell)
 }
 
 static void
+resize_attachment_rectangle (GdkRectangle         *rectangle,
+                             const GtkBorder      *border,
+                             GdkAttachmentOptions  options)
+{
+  switch (options & GDK_ATTACHMENT_ATTACH_MASK)
+    {
+    case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
+    case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
+      rectangle->y += border->bottom;
+      rectangle->height -= border->top + border->bottom;
+
+      if (options & GDK_ATTACHMENT_ALIGN_MASK)
+        {
+          rectangle->x -= border->left;
+          rectangle->width += border->left + border->right;
+        }
+
+      break;
+    case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
+    case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
+      rectangle->x += border->right;
+      rectangle->width -= border->left + border->right;
+
+      if (options & GDK_ATTACHMENT_ALIGN_MASK)
+        {
+          rectangle->y -= border->top;
+          rectangle->height += border->top + border->bottom;
+        }
+
+      break;
+    }
+}
+
+static void
 gtk_menu_position (GtkMenu  *menu,
                    gboolean  set_scroll_offset)
 {
@@ -4554,35 +4588,7 @@ gtk_menu_position (GtkMenu  *menu,
             }
 
           allocation = priv->attach_rect;
-
-          switch (priv->attach_options & GDK_ATTACHMENT_ATTACH_MASK)
-            {
-            case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
-            case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
-              allocation.y += border.bottom;
-              allocation.height -= border.top + border.bottom;
-
-              if (priv->attach_options & GDK_ATTACHMENT_ALIGN_MASK)
-                {
-                  allocation.x -= border.left;
-                  allocation.width += border.left + border.right;
-                }
-
-              break;
-            case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
-            case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
-              allocation.x += border.right;
-              allocation.width -= border.left + border.right;
-
-              if (priv->attach_options & GDK_ATTACHMENT_ALIGN_MASK)
-                {
-                  allocation.y -= border.top;
-                  allocation.height += border.top + border.bottom;
-                }
-
-              break;
-            }
-
+          resize_attachment_rectangle (&allocation, &border, priv->attach_options);
           gdk_window_set_attachment_rectangle (menu_window, &parent_origin, &allocation, priv->attach_options);
           return;
         }
@@ -4597,35 +4603,7 @@ gtk_menu_position (GtkMenu  *menu,
               gdk_window_get_root_coords (parent_window, allocation.x, allocation.y, &allocation.x, &allocation.y);
               allocation.x -= parent_origin.x;
               allocation.y -= parent_origin.y;
-
-              switch (priv->attach_options & GDK_ATTACHMENT_ATTACH_MASK)
-                {
-                case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
-                case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
-                  allocation.y += border.bottom;
-                  allocation.height -= border.top + border.bottom;
-
-                  if (priv->attach_options & GDK_ATTACHMENT_ALIGN_MASK)
-                    {
-                      allocation.x -= border.left;
-                      allocation.width += border.left + border.right;
-                    }
-
-                  break;
-                case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
-                case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
-                  allocation.x += border.right;
-                  allocation.width -= border.left + border.right;
-
-                  if (priv->attach_options & GDK_ATTACHMENT_ALIGN_MASK)
-                    {
-                      allocation.y -= border.top;
-                      allocation.height += border.top + border.bottom;
-                    }
-
-                  break;
-                }
-
+              resize_attachment_rectangle (&allocation, &border, priv->attach_options);
               gdk_window_set_attachment_rectangle (menu_window, &parent_origin, &allocation, priv->attach_options);
               return;
             }
