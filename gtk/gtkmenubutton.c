@@ -376,7 +376,7 @@ popup_menu (GtkMenuButton *menu_button,
             GdkEvent      *event)
 {
   GtkMenuButtonPrivate *priv = menu_button->priv;
-  GtkMenuPositionFunc func;
+  GdkAttachmentOptions options;
   GdkDevice *device;
   guint button;
   guint32 time;
@@ -386,17 +386,6 @@ popup_menu (GtkMenuButton *menu_button,
 
   if (!priv->menu)
     return;
-
-  switch (priv->arrow_type)
-    {
-      case GTK_ARROW_LEFT:
-      case GTK_ARROW_RIGHT:
-        func = (GtkMenuPositionFunc) menu_position_side_func;
-        break;
-      default:
-        func = (GtkMenuPositionFunc) menu_position_up_down_func;
-        break;
-  }
 
   if (event != NULL &&
       gdk_event_get_screen (event) == gtk_widget_get_screen (GTK_WIDGET (menu_button)))
@@ -412,14 +401,34 @@ popup_menu (GtkMenuButton *menu_button,
       time = gtk_get_current_event_time ();
     }
 
-  gtk_menu_popup_for_device (GTK_MENU (priv->menu),
-                             device,
-                             NULL, NULL,
-                             func,
-                             GTK_WIDGET (menu_button),
-                             NULL,
-                             button,
-                             time);
+  switch (priv->arrow_type)
+    {
+    case GTK_ARROW_UP:
+      options = GDK_ATTACHMENT_ATTACH_TOP_EDGE;
+      break;
+    case GTK_ARROW_DOWN:
+    case GTK_ARROW_NONE:
+      options = GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE;
+      break;
+    case GTK_ARROW_LEFT:
+      options = GDK_ATTACHMENT_ATTACH_LEFT_EDGE;
+      break;
+    case GTK_ARROW_RIGHT:
+      options = GDK_ATTACHMENT_ATTACH_RIGHT_EDGE;
+      break;
+    }
+
+  gtk_menu_popup_against (GTK_MENU (priv->menu),
+                          device,
+                          NULL,
+                          GTK_WIDGET (menu_button),
+                          NULL,
+                          options,
+                          NULL,
+                          NULL,
+                          NULL,
+                          button,
+                          time);
 }
 
 static void
