@@ -5687,6 +5687,7 @@ gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
                                          const GdkRectangle   *rect,
                                          GdkAttachmentOptions  options)
 {
+  GdkWindowImplX11 *impl = GDK_WINDOW_IMPL_X11 (window->impl);
   gint x;
   gint y;
 
@@ -5719,7 +5720,14 @@ gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
       y += origin->y;
     }
 
-  gdk_window_move (window, x, y);
+  if (impl->toplevel && !impl->toplevel->actually_mapped)
+    {
+      impl->toplevel->initial_position.x = x;
+      impl->toplevel->initial_position.y = y;
+      impl->toplevel->move_on_map = TRUE;
+    }
+  else
+    gdk_window_move (window, x, y);
 }
 
 static void
