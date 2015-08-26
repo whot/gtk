@@ -4613,6 +4613,17 @@ gtk_menu_position (GtkMenu  *menu,
               return;
             }
         }
+
+      pointer = _gtk_menu_shell_get_grab_device (GTK_MENU_SHELL (menu));
+      gdk_device_get_position (pointer, &pointer_screen, &x, &y);
+      parent_origin.x = 0;
+      parent_origin.y = 0;
+      allocation.x = x;
+      allocation.y = y;
+      allocation.width = 1;
+      allocation.height = 1;
+      gdk_window_set_attachment_rectangle (menu_window, &parent_origin, &allocation, GDK_ATTACHMENT_ATTACH_ANY_EDGE);
+      return;
     }
 
   widget = GTK_WIDGET (menu);
