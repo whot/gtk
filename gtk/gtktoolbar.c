@@ -2638,15 +2638,44 @@ show_menu (GtkToolbar     *toolbar,
 	   GdkEventButton *event)
 {
   GtkToolbarPrivate *priv = toolbar->priv;
+  GdkAttachmentOptions options;
 
   rebuild_menu (toolbar);
 
   gtk_widget_show_all (GTK_WIDGET (priv->menu));
 
-  gtk_menu_popup (priv->menu, NULL, NULL,
-		  menu_position_func, toolbar,
-		  event? event->button : 0,
-		  event? event->time : gtk_get_current_event_time());
+  if (priv->orientation == GTK_ORIENTATION_HORIZONTAL)
+    {
+      options = GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE;
+
+      if (gtk_widget_get_direction (GTK_WIDGET (toolbar)) == GTK_TEXT_DIR_LTR)
+        options |= GDK_ATTACHMENT_ALIGN_LEFT_EDGES;
+      else
+        options |= GDK_ATTACHMENT_ALIGN_RIGHT_EDGES;
+    }
+  else
+    {
+      options = GDK_ATTACHMENT_ALIGN_TOP_EDGES;
+
+      if (gtk_widget_get_direction (GTK_WIDGET (toolbar)) == GTK_TEXT_DIR_LTR)
+        options |= GDK_ATTACHMENT_ATTACH_RIGHT_EDGE;
+      else
+        options |= GDK_ATTACHMENT_ATTACH_LEFT_EDGE;
+    }
+
+  options |= GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
+
+  gtk_menu_popup_against (priv->menu,
+                          event ? event->device : NULL,
+                          NULL,
+                          priv->arrow_button,
+                          NULL,
+                          options,
+                          NULL,
+                          NULL,
+                          NULL,
+                          event ? event->button : 0,
+                          event ? event->time : gtk_get_current_event_time ());
 }
 
 static void
