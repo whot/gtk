@@ -5688,37 +5688,35 @@ gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
                                          GdkAttachmentOptions  options)
 {
   GdkWindowImplX11 *impl = GDK_WINDOW_IMPL_X11 (window->impl);
+  GdkPoint zero = { 0 };
   gint x;
   gint y;
 
   if (!rect)
     return;
 
+  if (!origin)
+    origin = &zero;
+
   switch (options & GDK_ATTACHMENT_ATTACH_MASK)
     {
     case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
-      x = rect->x;
-      y = rect->y - gdk_window_get_height (window);
+      x = origin->x + rect->x;
+      y = origin->y + rect->y - gdk_window_get_height (window);
       break;
     case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
-      x = rect->x - gdk_window_get_width (window);
-      y = rect->y;
+      x = origin->x + rect->x - gdk_window_get_width (window);
+      y = origin->y + rect->y;
       break;
     case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
-      x = rect->x + rect->width;
-      y = rect->y;
+      x = origin->x + rect->x + rect->width;
+      y = origin->y + rect->y;
       break;
     case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
     case GDK_ATTACHMENT_ATTACH_ANY_EDGE:
-      x = rect->x;
-      y = rect->y + rect->height;
+      x = origin->x + rect->x;
+      y = origin->y + rect->y + rect->height;
       break;
-    }
-
-  if (origin)
-    {
-      x += origin->x;
-      y += origin->y;
     }
 
   if (impl->toplevel && !impl->toplevel->actually_mapped)
