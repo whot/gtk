@@ -5689,8 +5689,13 @@ gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
 {
   GdkWindowImplX11 *impl = GDK_WINDOW_IMPL_X11 (window->impl);
   GdkPoint zero = { 0 };
+  GdkScreen *screen;
+  int monitor;
+  GdkRectangle bounds;
   gint x;
   gint y;
+  gint w;
+  gint h;
 
   if (!rect)
     return;
@@ -5698,24 +5703,82 @@ gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
   if (!origin)
     origin = &zero;
 
+  w = gdk_window_get_width (window);
+  h = gdk_window_get_height (window);
+  screen = gdk_window_get_screen (window);
+  monitor = gdk_screen_get_monitor_at_window (screen, window);
+  gdk_screen_get_monitor_workarea (screen, monitor, &bounds);
+
   switch (options & GDK_ATTACHMENT_ATTACH_MASK)
     {
     case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
       x = origin->x + rect->x;
-      y = origin->y + rect->y - gdk_window_get_height (window);
+      y = origin->y + rect->y - h;
+
+      if (y < bounds.y &&
+          (options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE) &&
+          origin->y + rect->y + rect->height + h <= bounds.y + bounds.height)
+        {
+          options &= ~GDK_ATTACHMENT_ATTACH_MASK;
+          options &= ~GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
+          options |= GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE;
+
+          gdk_x11_window_set_attachment_rectangle (window, origin, rect, options);
+          return;
+        }
+
       break;
     case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
-      x = origin->x + rect->x - gdk_window_get_width (window);
+      x = origin->x + rect->x - w;
       y = origin->y + rect->y;
+
+      if (x < bounds.x &&
+          (options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE) &&
+          origin->x + rect->x + rect->width + w <= bounds.x + bounds.width)
+        {
+          options &= ~GDK_ATTACHMENT_ATTACH_MASK;
+          options &= ~GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
+          options |= GDK_ATTACHMENT_ATTACH_RIGHT_EDGE;
+
+          gdk_x11_window_set_attachment_rectangle (window, origin, rect, options);
+          return;
+        }
+
       break;
     case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
       x = origin->x + rect->x + rect->width;
       y = origin->y + rect->y;
+
+      if (x + w > bounds.x + bounds.width &&
+          (options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE) &&
+          origin->x + rect->x - w >= bounds.x)
+        {
+          options &= ~GDK_ATTACHMENT_ATTACH_MASK;
+          options &= ~GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
+          options |= GDK_ATTACHMENT_ATTACH_LEFT_EDGE;
+
+          gdk_x11_window_set_attachment_rectangle (window, origin, rect, options);
+          return;
+        }
+
       break;
     case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
     case GDK_ATTACHMENT_ATTACH_ANY_EDGE:
       x = origin->x + rect->x;
       y = origin->y + rect->y + rect->height;
+
+      if (y + h > bounds.y + bounds.height &&
+          (options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE) &&
+          origin->y + rect->y - h >= bounds.y)
+        {
+          options &= ~GDK_ATTACHMENT_ATTACH_MASK;
+          options &= ~GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
+          options |= GDK_ATTACHMENT_ATTACH_TOP_EDGE;
+
+          gdk_x11_window_set_attachment_rectangle (window, origin, rect, options);
+          return;
+        }
+
       break;
     }
 
