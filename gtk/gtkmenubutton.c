@@ -404,24 +404,52 @@ popup_menu (GtkMenuButton *menu_button,
   switch (priv->arrow_type)
     {
     case GTK_ARROW_UP:
-      options = GDK_ATTACHMENT_ATTACH_TOP_EDGE;
-      break;
     case GTK_ARROW_DOWN:
     case GTK_ARROW_NONE:
-      options = GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE;
+      options = priv->arrow_type == GTK_ARROW_UP ? GDK_ATTACHMENT_ATTACH_TOP_EDGE : GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE;
+
+      switch (gtk_widget_get_halign (priv->menu))
+        {
+        case GTK_ALIGN_FILL:
+        case GTK_ALIGN_START:
+        case GTK_ALIGN_BASELINE:
+          options |= GDK_ATTACHMENT_ALIGN_LEFT_EDGES;
+          break;
+        case GTK_ALIGN_END:
+          options |= GDK_ATTACHMENT_ALIGN_RIGHT_EDGES;
+          break;
+        default:
+          break;
+        }
+
       break;
     case GTK_ARROW_LEFT:
-      options = GDK_ATTACHMENT_ATTACH_LEFT_EDGE;
-      break;
     case GTK_ARROW_RIGHT:
-      options = GDK_ATTACHMENT_ATTACH_RIGHT_EDGE;
+      options = priv->arrow_type == GTK_ARROW_LEFT ? GDK_ATTACHMENT_ATTACH_LEFT_EDGE : GDK_ATTACHMENT_ATTACH_RIGHT_EDGE;
+
+      switch (gtk_widget_get_valign (priv->menu))
+        {
+        case GTK_ALIGN_FILL:
+        case GTK_ALIGN_START:
+        case GTK_ALIGN_BASELINE:
+          options |= GDK_ATTACHMENT_ALIGN_TOP_EDGES;
+          break;
+        case GTK_ALIGN_END:
+          options |= GDK_ATTACHMENT_ALIGN_BOTTOM_EDGES;
+          break;
+        default:
+          break;
+        }
+
       break;
     }
+
+  options |= GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
 
   gtk_menu_popup_against (GTK_MENU (priv->menu),
                           device,
                           NULL,
-                          GTK_WIDGET (menu_button),
+                          priv->align_widget ? priv->align_widget : GTK_WIDGET (menu_button),
                           NULL,
                           options,
                           NULL,
