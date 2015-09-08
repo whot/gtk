@@ -5681,6 +5681,34 @@ gdk_x11_window_show_window_menu (GdkWindow *window,
   return TRUE;
 }
 
+static gboolean
+set_position (gint               *out_x,
+              gint               *out_y,
+              gint                x,
+              gint                y,
+              gint                w,
+              gint                h,
+              const GdkRectangle *bounds,
+              gboolean            hclamp,
+              gboolean            vclamp)
+{
+  if (hclamp || (x >= bounds->x && x + w <= bounds->x + bounds->width))
+    {
+      if (vclamp || (y >= bounds->y && y + h <= bounds->y + bounds->height))
+        {
+          if (out_x)
+            *out_x = CLAMP (x, bounds->x, bounds->x + bounds->width - w);
+
+          if (out_y)
+            *out_y = CLAMP (y, bounds->y, bounds->y + bounds->height - h);
+
+          return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+
 static void
 gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
                                          const GdkPoint       *origin,
@@ -5696,6 +5724,8 @@ gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
   gint y;
   gint w;
   gint h;
+  gboolean can_flip;
+  gboolean should_move;
 
   if (!rect)
     return;
@@ -5703,93 +5733,130 @@ gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
   if (!origin)
     origin = &zero;
 
-  w = gdk_window_get_width (window);
-  h = gdk_window_get_height (window);
   screen = gdk_window_get_screen (window);
   monitor = gdk_screen_get_monitor_at_window (screen, window);
   gdk_screen_get_monitor_workarea (screen, monitor, &bounds);
+  w = gdk_window_get_width (window);
+  h = gdk_window_get_height (window);
+  can_flip = options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
 
   switch (options & GDK_ATTACHMENT_ATTACH_MASK)
     {
     case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
-      x = origin->x + rect->x;
+      switch (options & GDK_ATTACHMENT_ALIGN_MASK)
+        {
+        case GDK_ATTACHMENT_ALIGN_LEFT_EDGES:
+          x = origin->x + rect->x;
+          break;
+        case GDK_ATTACHMENT_ALIGN_RIGHT_EDGES:
+          x = origin->x + rect->x + rect->width - w;
+          break;
+        default:
+          x = origin->x + rect->x + (rect->width - w) / 2;
+          break;
+        }
+
       y = origin->y + rect->y - h;
 
-      if (y < bounds.y &&
-          (options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE) &&
-          origin->y + rect->y + rect->height + h <= bounds.y + bounds.height)
-        {
-          options &= ~GDK_ATTACHMENT_ATTACH_MASK;
-          options &= ~GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
-          options |= GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE;
-
-          gdk_x11_window_set_attachment_rectangle (window, origin, rect, options);
-          return;
-        }
+      should_move = set_position (&x, &y, x, y, w, h, &bounds, TRUE, FALSE);
+      should_move = should_move || (can_flip && set_position (&x, &y, x, origin->y + rect->y + rect->height, w, h, &bounds, TRUE, FALSE));
+      should_move = should_move || set_position (&x, &y, x, y, w, h, &bounds, TRUE, TRUE);
 
       break;
     case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
       x = origin->x + rect->x - w;
-      y = origin->y + rect->y;
 
-      if (x < bounds.x &&
-          (options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE) &&
-          origin->x + rect->x + rect->width + w <= bounds.x + bounds.width)
+      switch (options & GDK_ATTACHMENT_ALIGN_MASK)
         {
-          options &= ~GDK_ATTACHMENT_ATTACH_MASK;
-          options &= ~GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
-          options |= GDK_ATTACHMENT_ATTACH_RIGHT_EDGE;
-
-          gdk_x11_window_set_attachment_rectangle (window, origin, rect, options);
-          return;
+        case GDK_ATTACHMENT_ALIGN_TOP_EDGES:
+          y = origin->y + rect->y;
+          break;
+        case GDK_ATTACHMENT_ALIGN_BOTTOM_EDGES:
+          y = origin->y + rect->y + rect->height - h;
+          break;
+        default:
+          y = origin->y + rect->y + (rect->height - h) / 2;
+          break;
         }
+
+      should_move = set_position (&x, &y, x, y, w, h, &bounds, FALSE, TRUE);
+      should_move = should_move || (can_flip && set_position (&x, &y, origin->x + rect->x + rect->width, y, w, h, &bounds, FALSE, TRUE));
+      should_move = should_move || set_position (&x, &y, x, y, w, h, &bounds, TRUE, TRUE);
 
       break;
     case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
       x = origin->x + rect->x + rect->width;
-      y = origin->y + rect->y;
 
-      if (x + w > bounds.x + bounds.width &&
-          (options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE) &&
-          origin->x + rect->x - w >= bounds.x)
+      switch (options & GDK_ATTACHMENT_ALIGN_MASK)
         {
-          options &= ~GDK_ATTACHMENT_ATTACH_MASK;
-          options &= ~GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
-          options |= GDK_ATTACHMENT_ATTACH_LEFT_EDGE;
-
-          gdk_x11_window_set_attachment_rectangle (window, origin, rect, options);
-          return;
+        case GDK_ATTACHMENT_ALIGN_TOP_EDGES:
+          y = origin->y + rect->y;
+          break;
+        case GDK_ATTACHMENT_ALIGN_BOTTOM_EDGES:
+          y = origin->y + rect->y + rect->height - h;
+          break;
+        default:
+          y = origin->y + rect->y + (rect->height - h) / 2;
+          break;
         }
+
+      should_move = set_position (&x, &y, x, y, w, h, &bounds, FALSE, TRUE);
+      should_move = should_move || (can_flip && set_position (&x, &y, origin->x + rect->x - w, y, w, h, &bounds, FALSE, TRUE));
+      should_move = should_move || set_position (&x, &y, x, y, w, h, &bounds, TRUE, TRUE);
 
       break;
     case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
-    case GDK_ATTACHMENT_ATTACH_ANY_EDGE:
-      x = origin->x + rect->x;
+      switch (options & GDK_ATTACHMENT_ALIGN_MASK)
+        {
+        case GDK_ATTACHMENT_ALIGN_LEFT_EDGES:
+          x = origin->x + rect->x;
+          break;
+        case GDK_ATTACHMENT_ALIGN_RIGHT_EDGES:
+          x = origin->x + rect->x + rect->width - w;
+          break;
+        default:
+          x = origin->x + rect->x + (rect->width - w) / 2;
+          break;
+        }
+
       y = origin->y + rect->y + rect->height;
 
-      if (y + h > bounds.y + bounds.height &&
-          (options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE) &&
-          origin->y + rect->y - h >= bounds.y)
-        {
-          options &= ~GDK_ATTACHMENT_ATTACH_MASK;
-          options &= ~GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
-          options |= GDK_ATTACHMENT_ATTACH_TOP_EDGE;
+      should_move = set_position (&x, &y, x, y, w, h, &bounds, TRUE, FALSE);
+      should_move = should_move || (can_flip && set_position (&x, &y, x, origin->y + rect->y - h, w, h, &bounds, TRUE, FALSE));
+      should_move = should_move || set_position (&x, &y, x, y, w, h, &bounds, TRUE, TRUE);
 
-          gdk_x11_window_set_attachment_rectangle (window, origin, rect, options);
-          return;
-        }
+      break;
+    case GDK_ATTACHMENT_ATTACH_ANY_EDGE:
+      x = origin->x + rect->x + (rect->width - w) / 2;
+      y = origin->y + rect->y + (rect->height - h) / 2;
+
+      should_move = set_position (&x, &y, x, origin->y + rect->y + rect->height, w, h, &bounds, TRUE, FALSE);
+      should_move = should_move || set_position (&x, &y, x, origin->y + rect->y - h, w, h, &bounds, TRUE, FALSE);
+      should_move = should_move || set_position (&x, &y, origin->x + rect->x + rect->width, y, w, h, &bounds, FALSE, TRUE);
+      should_move = should_move || set_position (&x, &y, origin->x + rect->x - w, y, w, h, &bounds, FALSE, TRUE);
+      should_move = should_move || set_position (&x, &y, x, y, w, h, &bounds, TRUE, TRUE);
+
+      break;
+    case GDK_ATTACHMENT_ATTACH_NO_EDGE:
+      x = origin->x + rect->x + (rect->width - w) / 2;
+      y = origin->y + rect->y + (rect->height - h) / 2;
+
+      should_move = set_position (&x, &y, x, y, w, h, &bounds, TRUE, TRUE);
 
       break;
     }
 
-  if (impl->toplevel && !impl->toplevel->actually_mapped)
+  if (should_move)
     {
-      impl->toplevel->initial_position.x = x;
-      impl->toplevel->initial_position.y = y;
-      impl->toplevel->move_on_map = TRUE;
+      if (impl->toplevel && !impl->toplevel->actually_mapped)
+        {
+          impl->toplevel->initial_position.x = x;
+          impl->toplevel->initial_position.y = y;
+          impl->toplevel->move_on_map = TRUE;
+        }
+      else
+        gdk_window_move (window, x, y);
     }
-  else
-    gdk_window_move (window, x, y);
 }
 
 static void
