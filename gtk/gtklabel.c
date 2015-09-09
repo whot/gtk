@@ -6625,9 +6625,18 @@ gtk_label_do_popup (GtkLabel       *label,
                     event->button, event->time);
   else
     {
-      gtk_menu_popup (GTK_MENU (menu), NULL, NULL,
-                      popup_position_func, label,
-                      0, gtk_get_current_event_time ());
+      gtk_menu_popup_against (GTK_MENU (menu),
+                              NULL,
+                              NULL,
+                              GTK_WIDGET (label),
+                              NULL,
+                              GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE | GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE,
+                              NULL,
+                              NULL,
+                              NULL,
+                              0,
+                              gtk_get_current_event_time ());
+
       gtk_menu_shell_select_first (GTK_MENU_SHELL (menu), FALSE);
     }
 }
