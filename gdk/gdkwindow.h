@@ -334,8 +334,6 @@ typedef enum
  * @GDK_ATTACHMENT_ALIGN_RIGHT_EDGES: align right edges.
  * @GDK_ATTACHMENT_ALIGN_BOTTOM_EDGES: align bottom edges.
  * @GDK_ATTACHMENT_ALIGN_MASK: bit mask.
- * @GDK_ATTACHMENT_CLAMP: clamp position within monitor.
- * @GDK_ATTACHMENT_SCROLL: scroll contents when clamped.
  *
  * Hints for placing a popup menu relative to an attachment rectangle.
  */
@@ -353,9 +351,7 @@ typedef enum
   GDK_ATTACHMENT_ALIGN_LEFT_EDGES     = 0x20,
   GDK_ATTACHMENT_ALIGN_RIGHT_EDGES    = 0x30,
   GDK_ATTACHMENT_ALIGN_BOTTOM_EDGES   = 0x40,
-  GDK_ATTACHMENT_ALIGN_MASK           = 0x70,
-  GDK_ATTACHMENT_CLAMP                = 0x80,
-  GDK_ATTACHMENT_SCROLL               = 0x100
+  GDK_ATTACHMENT_ALIGN_MASK           = 0x70
 } GdkAttachmentOptions;
 
 /**
