@@ -5734,11 +5734,14 @@ gdk_x11_window_set_attachment_rectangle (GdkWindow            *window,
     origin = &zero;
 
   screen = gdk_window_get_screen (window);
-  monitor = gdk_screen_get_monitor_at_window (screen, window);
+  x = origin->x + rect->x + rect->width / 2;
+  y = origin->y + rect->y + rect->height / 2;
+  monitor = gdk_screen_get_monitor_at_point (screen, x, y);
   gdk_screen_get_monitor_workarea (screen, monitor, &bounds);
   w = gdk_window_get_width (window);
   h = gdk_window_get_height (window);
   can_flip = options & GDK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
+  should_move = FALSE;
 
   switch (options & GDK_ATTACHMENT_ATTACH_MASK)
     {
