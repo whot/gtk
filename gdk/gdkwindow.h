@@ -463,6 +463,49 @@ struct _GdkGeometry
   GdkGravity win_gravity;
 };
 
+enum _GdkAttachmentVariable
+{
+  GDK_X_MIN,
+  GDK_X_MID,
+  GDK_X_MAX,
+  GDK_Y_MIN,
+  GDK_Y_MID,
+  GDK_Y_MAX
+};
+
+typedef enum _GdkAttachmentVariable GdkAttachmentVariable;
+typedef struct _GdkAttachmentConstraint GdkAttachmentConstraint;
+typedef struct _GdkAttachmentPadding GdkAttachmentPadding;
+typedef struct _GdkAttachmentParameters GdkAttachmentParameters;
+typedef void (*GdkAttachmentOffsetCallback) (GdkWindow *window,
+                                             gint       delta_x,
+                                             gint       delta_y);
+
+struct _GdkAttachmentConstraint
+{
+  GdkAttachmentVariable variable;
+  gint value;
+};
+
+struct _GdkAttachmentPadding
+{
+  gint top;
+  gint left;
+  gint right;
+  gint bottom;
+};
+
+struct _GdkAttachmentParameters
+{
+  GdkPoint parent_origin;
+  gboolean has_rectangle;
+  GdkRectangle rectangle;
+  GList *primary_constraints;
+  GList *secondary_constraints;
+  GdkAttachmentPadding window_padding;
+  GdkAttachmentOffsetCallback offset_callback;
+};
+
 typedef struct _GdkWindowClass GdkWindowClass;
 
 #define GDK_TYPE_WINDOW              (gdk_window_get_type ())
@@ -1123,6 +1166,26 @@ gboolean  gdk_window_show_window_menu          (GdkWindow      *window,
 GDK_AVAILABLE_IN_3_16
 GdkGLContext * gdk_window_create_gl_context    (GdkWindow      *window,
                                                 GError        **error);
+
+GDK_AVAILABLE_IN_3_18
+GdkAttachmentParameters * gdk_attachment_parameters_new                      (void);
+
+GDK_AVAILABLE_IN_3_18
+gpointer                  gdk_attachment_parameters_copy                     (gconstpointer            parameters,
+                                                                              gpointer                 unused);
+
+GDK_AVAILABLE_IN_3_18
+void                      gdk_attachment_parameters_free                     (gpointer                 parameters);
+
+GDK_AVAILABLE_IN_3_18
+void                      gdk_attachment_parameters_add_primary_constraint   (GdkAttachmentParameters *parameters,
+                                                                              GdkAttachmentVariable    variable,
+                                                                              gint                     value);
+
+GDK_AVAILABLE_IN_3_18
+void                      gdk_attachment_parameters_add_secondary_constraint (GdkAttachmentParameters *parameters,
+                                                                              GdkAttachmentVariable    variable,
+                                                                              gint                     value);
 
 G_END_DECLS
 

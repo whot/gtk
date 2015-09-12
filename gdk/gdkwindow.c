@@ -11461,3 +11461,93 @@ gdk_window_show_window_menu (GdkWindow *window,
   else
     return FALSE;
 }
+
+static GdkAttachmentConstraint *
+gdk_attachment_constraint_new (GdkAttachmentVariable variable,
+                               gint                  value)
+{
+  GdkAttachmentConstraint *constraint = g_new (GdkAttachmentConstraint, 1);
+
+  constraint->variable = variable;
+  constraint->value = value;
+
+  return constraint;
+}
+
+static gpointer
+gdk_attachment_constraint_copy (gconstpointer pointer,
+                                gpointer      unused)
+{
+  const GdkAttachmentConstraint *constraint = pointer;
+
+  g_return_val_if_fail (constraint != NULL, NULL);
+
+  return gdk_attachment_constraint_new (constraint->variable, constraint->value);
+}
+
+static void
+gdk_attachment_constraint_free (gpointer pointer)
+{
+  g_free (pointer);
+}
+
+GdkAttachmentParameters *
+gdk_attachment_parameters_new (void)
+{
+  return g_new0 (GdkAttachmentParameters, 1);
+}
+
+gpointer
+gdk_attachment_parameters_copy (gconstpointer pointer,
+                                gpointer      unused)
+{
+  const GdkAttachmentParameters *parameters = pointer;
+  GdkAttachmentParameters *copy;
+
+  g_return_val_if_fail (parameters != NULL, NULL);
+
+  copy = gdk_attachment_parameters_new ();
+
+  copy->primary_constraints = g_list_copy_deep (parameters->primary_constraints, gdk_attachment_constraint_copy, NULL);
+  copy->secondary_constraints = g_list_copy_deep (parameters->secondary_constraints, gdk_attachment_constraint_copy, NULL);
+  copy->window_padding = parameters->window_padding;
+  copy->offset_callback = parameters->offset_callback;
+
+  return copy;
+}
+
+void
+gdk_attachment_parameters_free (gpointer pointer)
+{
+  GdkAttachmentParameters *parameters = pointer;
+
+  if (!parameters)
+    return;
+
+  g_list_free_full (parameters->secondary_constraints, gdk_attachment_constraint_free);
+  g_list_free_full (parameters->primary_constraints, gdk_attachment_constraint_free);
+
+  g_free (parameters);
+}
+
+void
+gdk_attachment_parameters_add_primary_constraint (GdkAttachmentParameters *parameters,
+                                                  GdkAttachmentVariable    variable,
+                                                  gint                     value)
+{
+  g_return_if_fail (parameters != NULL);
+
+  parameters->primary_constraints = g_list_append (parameters->primary_constraints,
+                                                   gdk_attachment_constraint_new (variable, value));
+}
+
+void
+gdk_attachment_parameters_add_secondary_constraint (GdkAttachmentParameters *parameters,
+                                                    GdkAttachmentVariable    variable,
+                                                    gint                     value)
+{
+  g_return_if_fail (parameters != NULL);
+
+  parameters->secondary_constraints = g_list_append (parameters->secondary_constraints,
+                                                     gdk_attachment_constraint_new (variable, value));
+}
