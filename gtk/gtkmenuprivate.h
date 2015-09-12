@@ -51,6 +51,8 @@ struct _GtkMenuPrivate
   gint                position_x;
   gint                position_y;
 
+  GdkAttachmentParameters *attachment_parameters;
+
   guint toggle_size;
   guint accel_size;
 

@@ -1152,6 +1152,8 @@ gtk_menu_destroy (GtkWidget *widget)
 
   g_clear_pointer (&priv->title, g_free);
 
+  g_clear_pointer (&priv->attachment_parameters, gdk_attachment_parameters_free);
+
   if (priv->position_func_data_destroy)
     {
       priv->position_func_data_destroy (priv->position_func_data);
@@ -1496,53 +1498,17 @@ associate_menu_grab_transfer_window (GtkMenu *menu)
   g_object_set_data (G_OBJECT (toplevel_window), I_("gdk-attached-grab-window"), transfer_window);
 }
 
-/**
- * gtk_menu_popup_for_device:
- * @menu: a #GtkMenu
- * @device: (allow-none): a #GdkDevice
- * @parent_menu_shell: (allow-none): the menu shell containing the triggering
- *     menu item, or %NULL
- * @parent_menu_item: (allow-none): the menu item whose activation triggered
- *     the popup, or %NULL
- * @func: (allow-none): a user supplied function used to position the menu,
- *     or %NULL
- * @data: (allow-none): user supplied data to be passed to @func
- * @destroy: (allow-none): destroy notify for @data
- * @button: the mouse button which was pressed to initiate the event
- * @activate_time: the time at which the activation event occurred
- *
- * Displays a menu and makes it available for selection.
- *
- * Applications can use this function to display context-sensitive menus,
- * and will typically supply %NULL for the @parent_menu_shell,
- * @parent_menu_item, @func, @data and @destroy parameters. The default
- * menu positioning function will position the menu at the current position
- * of @device (or its corresponding pointer).
- *
- * The @button parameter should be the mouse button pressed to initiate
- * the menu popup. If the menu popup was initiated by something other than
- * a mouse button press, such as a mouse button release or a keypress,
- * @button should be 0.
- *
- * The @activate_time parameter is used to conflict-resolve initiation of
- * concurrent requests for mouse/keyboard grab requests. To function
- * properly, this needs to be the time stamp of the user event (such as
- * a mouse click or key press) that caused the initiation of the popup.
- * Only if no such event is available, gtk_get_current_event_time() can
- * be used instead.
- *
- * Since: 3.0
- */
-void
-gtk_menu_popup_for_device (GtkMenu             *menu,
-                           GdkDevice           *device,
-                           GtkWidget           *parent_menu_shell,
-                           GtkWidget           *parent_menu_item,
-                           GtkMenuPositionFunc  func,
-                           gpointer             data,
-                           GDestroyNotify       destroy,
-                           guint                button,
-                           guint32              activate_time)
+static void
+gtk_menu_popup_internal (GtkMenu                 *menu,
+                         GdkDevice               *device,
+                         GtkWidget               *parent_menu_shell,
+                         GtkWidget               *parent_menu_item,
+                         GtkMenuPositionFunc      func,
+                         gpointer                 data,
+                         GDestroyNotify           destroy,
+                         guint                    button,
+                         guint32                  activate_time,
+                         GdkAttachmentParameters *parameters)
 {
   GtkMenuPrivate *priv = menu->priv;
   GtkWidget *widget;
@@ -1554,6 +1520,9 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
   GtkWidget *parent_toplevel;
   GdkDevice *keyboard, *pointer, *source_device = NULL;
   GdkDisplay *display;
+
+  if (!GTK_IS_MENU (menu) || (device && !GDK_IS_DEVICE (device)))
+    gdk_attachment_parameters_free (parameters);
 
   g_return_if_fail (GTK_IS_MENU (menu));
   g_return_if_fail (device == NULL || GDK_IS_DEVICE (device));
@@ -1674,6 +1643,7 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
        */
       menu_shell->priv->parent_menu_shell = NULL;
       menu_grab_transfer_window_destroy (menu);
+      gdk_attachment_parameters_free (parameters);
       return;
     }
 
@@ -1727,6 +1697,14 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
   priv->position_func_data_destroy = destroy;
   menu_shell->priv->activate_time = activate_time;
 
+  if (!parameters || parameters != priv->attachment_parameters)
+    {
+      gdk_attachment_parameters_free (priv->attachment_parameters);
+      priv->attachment_parameters = parameters;
+    }
+  else
+    g_warning ("gtk_menu_popup_internal (): menu already owns attachment parameters");
+
   /* We need to show the menu here rather in the init function
    * because code expects to be able to tell if the menu is onscreen
    * by looking at gtk_widget_get_visible (menu)
@@ -1765,6 +1743,271 @@ gtk_menu_popup_for_device (GtkMenu             *menu,
     _gtk_menu_shell_set_keyboard_mode (menu_shell, TRUE);
 
   _gtk_menu_shell_update_mnemonics (menu_shell);
+}
+
+GdkAttachmentParameters *
+gtk_menu_attachment_parameters (GtkMenu                     *menu,
+                                GtkWidget                   *attachment_widget,
+                                const GdkRectangle          *attachment_rectangle,
+                                GtkAttachmentOptions         attachment_options,
+                                const GdkPoint              *attachment_offset,
+                                GdkAttachmentOffsetCallback  attachment_callback)
+{
+  GdkAttachmentParameters *parameters = gdk_attachment_parameters_new ();
+  const GdkRectangle *rectangle = attachment_rectangle;
+  GdkWindow *window;
+  GdkRectangle allocation;
+  GdkDevice *pointer;
+  GtkBorder padding;
+  gint top;
+  gint left;
+  gint right;
+  gint bottom;
+  GdkPoint offset = { 0 };
+
+  if (attachment_widget)
+    {
+      window = gtk_widget_get_window (attachment_widget);
+
+      if (window)
+        gdk_window_get_root_origin (window, &parameters->parent_origin.x, &parameters->parent_origin.y);
+
+      if (!rectangle)
+        {
+          gtk_widget_get_allocation (attachment_widget, &allocation);
+
+          if (window)
+            gdk_window_get_root_coords (window, allocation.x, allocation.y, &allocation.x, &allocation.y);
+
+          allocation.x -= parameters->parent_origin.x;
+          allocation.y -= parameters->parent_origin.y;
+          rectangle = &allocation;
+        }
+    }
+
+  if (!rectangle && menu)
+    {
+      pointer = _gtk_menu_shell_get_grab_device (GTK_MENU_SHELL (menu));
+      gdk_device_get_position (pointer, NULL, &allocation.x, &allocation.y);
+
+      allocation.x -= parameters->parent_origin.x;
+      allocation.y -= parameters->parent_origin.y;
+      allocation.width = 1;
+      allocation.height = 1;
+    }
+
+  if (rectangle)
+    {
+      parameters->has_rectangle = TRUE;
+      parameters->rectangle = *rectangle;
+
+      top = rectangle->y;
+      left = rectangle->x;
+      right = left + rectangle->width;
+      bottom = top + rectangle->height;
+
+      if (!attachment_offset)
+        attachment_offset = &offset;
+
+      switch (attachment_options & GTK_ATTACHMENT_ATTACH_MASK)
+        {
+        case GTK_ATTACHMENT_ATTACH_TOP_EDGE:
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_Y_MAX, top + attachment_offset->y);
+
+          if (attachment_options & GTK_ATTACHMENT_ATTACH_OPPOSITE_EDGE)
+            gdk_attachment_parameters_add_primary_constraint (parameters, GDK_Y_MIN, bottom - attachment_offset->y);
+
+          break;
+
+        case GTK_ATTACHMENT_ATTACH_LEFT_EDGE:
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_X_MAX, left + attachment_offset->x);
+
+          if (attachment_options & GTK_ATTACHMENT_ATTACH_OPPOSITE_EDGE)
+            gdk_attachment_parameters_add_primary_constraint (parameters, GDK_X_MIN, right - attachment_offset->x);
+
+          break;
+
+        case GTK_ATTACHMENT_ATTACH_RIGHT_EDGE:
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_X_MIN, right + attachment_offset->x);
+
+          if (attachment_options & GTK_ATTACHMENT_ATTACH_OPPOSITE_EDGE)
+            gdk_attachment_parameters_add_primary_constraint (parameters, GDK_X_MAX, left - attachment_offset->x);
+
+          break;
+
+        case GTK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_Y_MIN, bottom + attachment_offset->y);
+
+          if (attachment_options & GTK_ATTACHMENT_ATTACH_OPPOSITE_EDGE)
+            gdk_attachment_parameters_add_primary_constraint (parameters, GDK_Y_MAX, top - attachment_offset->y);
+
+          break;
+
+        case GTK_ATTACHMENT_ATTACH_ANY_EDGE:
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_Y_MIN, bottom + attachment_offset->y);
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_Y_MAX, top - attachment_offset->y);
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_X_MIN, right + attachment_offset->x);
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_X_MAX, left - attachment_offset->x);
+
+          break;
+
+        default:
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_Y_MID, (top + bottom) / 2 + attachment_offset->y);
+          gdk_attachment_parameters_add_primary_constraint (parameters, GDK_X_MID, (left + right) / 2 + attachment_offset->x);
+
+          break;
+        }
+
+      switch (attachment_options & GTK_ATTACHMENT_ALIGN_MASK)
+        {
+        case GTK_ATTACHMENT_ALIGN_TOP_EDGES:
+          gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_Y_MIN, top + attachment_offset->y);
+
+          if (attachment_options & GTK_ATTACHMENT_ALIGN_VERTICALLY)
+            gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_Y_MAX, bottom - attachment_offset->y);
+
+          break;
+
+        case GTK_ATTACHMENT_ALIGN_LEFT_EDGES:
+          gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_X_MIN, left + attachment_offset->x);
+
+          if (attachment_options & GTK_ATTACHMENT_ALIGN_HORIZONTALLY)
+            gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_X_MAX, right - attachment_offset->x);
+
+          break;
+
+        case GTK_ATTACHMENT_ALIGN_RIGHT_EDGES:
+          gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_X_MAX, right + attachment_offset->x);
+
+          if (attachment_options & GTK_ATTACHMENT_ALIGN_HORIZONTALLY)
+            gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_X_MIN, left - attachment_offset->x);
+
+          break;
+
+        case GTK_ATTACHMENT_ALIGN_BOTTOM_EDGES:
+          gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_Y_MAX, bottom + attachment_offset->y);
+
+          if (attachment_options & GTK_ATTACHMENT_ALIGN_VERTICALLY)
+            gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_Y_MIN, top - attachment_offset->y);
+
+          break;
+
+        default:
+          gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_X_MID, (left + right) / 2 + attachment_offset->x);
+          gdk_attachment_parameters_add_secondary_constraint (parameters, GDK_Y_MID, (top + bottom) / 2 + attachment_offset->y);
+
+          break;
+        }
+    }
+
+  if (menu)
+    {
+      _gtk_window_get_shadow_width (GTK_WINDOW (menu->priv->toplevel), &padding);
+
+      parameters->window_padding.top = padding.top;
+      parameters->window_padding.left = padding.left;
+      parameters->window_padding.right = padding.right;
+      parameters->window_padding.bottom = padding.bottom;
+    }
+
+  parameters->offset_callback = attachment_callback;
+
+  return parameters;
+}
+
+void
+gtk_menu_popup_with_parameters (GtkMenu                 *menu,
+                                GdkDevice               *device,
+                                GtkWidget               *parent_menu_shell,
+                                guint                    button,
+                                guint32                  activate_time,
+                                GdkAttachmentParameters *parameters)
+{
+  if (!GTK_IS_MENU (menu))
+    gdk_attachment_parameters_free (parameters);
+
+  g_return_if_fail (GTK_IS_MENU (menu));
+
+  if (!parameters)
+    parameters = gtk_menu_attachment_parameters (menu,
+                                                 NULL,
+                                                 NULL,
+                                                 GTK_ATTACHMENT_ATTACH_CURSOR,
+                                                 NULL,
+                                                 NULL);
+
+  gtk_menu_popup_internal (menu,
+                           device,
+                           parent_menu_shell,
+                           NULL,
+                           NULL,
+                           NULL,
+                           NULL,
+                           button,
+                           activate_time,
+                           parameters);
+}
+
+/**
+ * gtk_menu_popup_for_device:
+ * @menu: a #GtkMenu
+ * @device: (allow-none): a #GdkDevice
+ * @parent_menu_shell: (allow-none): the menu shell containing the triggering
+ *     menu item, or %NULL
+ * @parent_menu_item: (allow-none): the menu item whose activation triggered
+ *     the popup, or %NULL
+ * @func: (allow-none): a user supplied function used to position the menu,
+ *     or %NULL
+ * @data: (allow-none): user supplied data to be passed to @func
+ * @destroy: (allow-none): destroy notify for @data
+ * @button: the mouse button which was pressed to initiate the event
+ * @activate_time: the time at which the activation event occurred
+ *
+ * Displays a menu and makes it available for selection.
+ *
+ * Applications can use this function to display context-sensitive menus,
+ * and will typically supply %NULL for the @parent_menu_shell,
+ * @parent_menu_item, @func, @data and @destroy parameters. The default
+ * menu positioning function will position the menu at the current position
+ * of @device (or its corresponding pointer).
+ *
+ * The @button parameter should be the mouse button pressed to initiate
+ * the menu popup. If the menu popup was initiated by something other than
+ * a mouse button press, such as a mouse button release or a keypress,
+ * @button should be 0.
+ *
+ * The @activate_time parameter is used to conflict-resolve initiation of
+ * concurrent requests for mouse/keyboard grab requests. To function
+ * properly, this needs to be the time stamp of the user event (such as
+ * a mouse click or key press) that caused the initiation of the popup.
+ * Only if no such event is available, gtk_get_current_event_time() can
+ * be used instead.
+ *
+ * Since: 3.0
+ */
+void
+gtk_menu_popup_for_device (GtkMenu             *menu,
+                           GdkDevice           *device,
+                           GtkWidget           *parent_menu_shell,
+                           GtkWidget           *parent_menu_item,
+                           GtkMenuPositionFunc  func,
+                           gpointer             data,
+                           GDestroyNotify       destroy,
+                           guint                button,
+                           guint32              activate_time)
+{
+  g_return_if_fail (GTK_IS_MENU (menu));
+
+  gtk_menu_popup_internal (menu,
+                           device,
+                           parent_menu_shell,
+                           parent_menu_item,
+                           func,
+                           data,
+                           destroy,
+                           button,
+                           activate_time,
+                           NULL);
 }
 
 /**
@@ -4471,16 +4714,27 @@ gtk_menu_position (GtkMenu  *menu,
   GdkDevice *pointer;
   GtkBorder border;
 
+  /* Realize so we have the proper width and height to figure out
+   * the right place to popup the menu. */
+
+  gtk_widget_realize (priv->toplevel);
+
+  /* Set the type hint here to allow custom position functions
+   * to set a different hint. */
+
+  if (!gtk_widget_get_visible (priv->toplevel))
+    gtk_window_set_type_hint (GTK_WINDOW (priv->toplevel), GDK_WINDOW_TYPE_HINT_POPUP_MENU);
+
+  gdk_window_set_attachment_parameters (gtk_widget_get_window (priv->toplevel), priv->attachment_parameters);
+
+  if (priv->attachment_parameters)
+    return;
+
   widget = GTK_WIDGET (menu);
 
   screen = gtk_widget_get_screen (widget);
   pointer = _gtk_menu_shell_get_grab_device (GTK_MENU_SHELL (menu));
   gdk_device_get_position (pointer, &pointer_screen, &x, &y);
-
-  /* Realize so we have the proper width and height to figure out
-   * the right place to popup the menu.
-   */
-  gtk_widget_realize (priv->toplevel);
 
   _gtk_window_get_shadow_width (GTK_WINDOW (priv->toplevel), &border);
 
@@ -4500,12 +4754,6 @@ gtk_menu_position (GtkMenu  *menu,
 
   priv->monitor_num = gdk_screen_get_monitor_at_point (screen, x, y);
   priv->initially_pushed_in = FALSE;
-
-  /* Set the type hint here to allow custom position functions
-   * to set a different hint
-   */
-  if (!gtk_widget_get_visible (priv->toplevel))
-    gtk_window_set_type_hint (GTK_WINDOW (priv->toplevel), GDK_WINDOW_TYPE_HINT_POPUP_MENU);
 
   if (priv->position_func)
     {

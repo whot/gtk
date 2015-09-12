@@ -155,6 +155,52 @@ void       gtk_menu_popup_for_device      (GtkMenu             *menu,
                                            guint                button,
                                            guint32              activate_time);
 
+enum _GtkAttachmentOptions
+{
+  GTK_ATTACHMENT_ATTACH_NO_EDGE        = 0x1,
+  GTK_ATTACHMENT_ATTACH_TOP_EDGE       = 0x2,
+  GTK_ATTACHMENT_ATTACH_LEFT_EDGE      = 0x3,
+  GTK_ATTACHMENT_ATTACH_RIGHT_EDGE     = 0x4,
+  GTK_ATTACHMENT_ATTACH_BOTTOM_EDGE    = 0x5,
+  GTK_ATTACHMENT_ATTACH_ANY_EDGE       = 0x6,
+  GTK_ATTACHMENT_ATTACH_MASK           = 0x7,
+  GTK_ATTACHMENT_ATTACH_OPPOSITE_EDGE  = 0x8,
+  GTK_ATTACHMENT_ALIGN_TOP_EDGES       = 0x10,
+  GTK_ATTACHMENT_ALIGN_LEFT_EDGES      = 0x20,
+  GTK_ATTACHMENT_ALIGN_RIGHT_EDGES     = 0x40,
+  GTK_ATTACHMENT_ALIGN_BOTTOM_EDGES    = 0x80,
+  GTK_ATTACHMENT_ALIGN_VERTICAL_MASK   = 0x90,
+  GTK_ATTACHMENT_ALIGN_HORIZONTAL_MASK = 0x60,
+  GTK_ATTACHMENT_ALIGN_MASK            = 0xF0,
+  GTK_ATTACHMENT_ALIGN_VERTICALLY      = 0x100,
+  GTK_ATTACHMENT_ALIGN_HORIZONTALLY    = 0x200,
+  GTK_ATTACHMENT_ATTACH_CURSOR         = GTK_ATTACHMENT_ATTACH_ANY_EDGE
+                                       | GTK_ATTACHMENT_ATTACH_OPPOSITE_EDGE
+                                       | GTK_ATTACHMENT_ALIGN_TOP_EDGES
+                                       | GTK_ATTACHMENT_ALIGN_LEFT_EDGES
+                                       | GTK_ATTACHMENT_ALIGN_VERTICALLY
+                                       | GTK_ATTACHMENT_ALIGN_HORIZONTALLY
+};
+
+typedef enum _GtkAttachmentOptions GtkAttachmentOptions;
+
+GDK_AVAILABLE_IN_3_18
+GdkAttachmentParameters *
+           gtk_menu_attachment_parameters (GtkMenu                     *menu,
+                                           GtkWidget                   *attachment_widget,
+                                           const GdkRectangle          *attachment_rectangle,
+                                           GtkAttachmentOptions         attachment_options,
+                                           const GdkPoint              *attachment_offset,
+                                           GdkAttachmentOffsetCallback  attachment_callback);
+
+GDK_AVAILABLE_IN_3_18
+void       gtk_menu_popup_with_parameters (GtkMenu                     *menu,
+                                           GdkDevice                   *device,
+                                           GtkWidget                   *parent_menu_shell,
+                                           guint                        button,
+                                           guint32                      activate_time,
+                                           GdkAttachmentParameters     *parameters);
+
 /* Position the menu according to its position function. Called
  * from gtkmenuitem.c when a menu-item changes its allocation
  */
