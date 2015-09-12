@@ -301,6 +301,9 @@ struct _GdkWindowImplClass
                                            GError        **error);
   void         (*invalidate_for_new_frame)(GdkWindow      *window,
                                            cairo_region_t *update_area);
+
+  void         (*set_attachment_parameters) (GdkWindow                     *window,
+                                             const GdkAttachmentParameters *parameters);
 };
 
 /* Interface Functions */

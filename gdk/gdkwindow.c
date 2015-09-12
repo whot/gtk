@@ -11551,3 +11551,26 @@ gdk_attachment_parameters_add_secondary_constraint (GdkAttachmentParameters *par
   parameters->secondary_constraints = g_list_append (parameters->secondary_constraints,
                                                      gdk_attachment_constraint_new (variable, value));
 }
+
+/**
+ * gdk_window_set_attachment_parameters:
+ * @window: a #GdkWindow
+ * @parameters: a #GdkAttachmentParameters
+ *
+ * Constrains the position of the window.
+ *
+ * Since: 3.18
+ */
+void
+gdk_window_set_attachment_parameters (GdkWindow                     *window,
+                                      const GdkAttachmentParameters *parameters)
+{
+  GdkWindowImplClass *impl_class;
+
+  g_return_if_fail (GDK_IS_WINDOW (window));
+
+  impl_class = GDK_WINDOW_IMPL_GET_CLASS (window->impl);
+
+  if (impl_class->set_attachment_parameters)
+    impl_class->set_attachment_parameters (window, parameters);
+}

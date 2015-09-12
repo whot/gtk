@@ -1171,21 +1171,25 @@ GDK_AVAILABLE_IN_3_18
 GdkAttachmentParameters * gdk_attachment_parameters_new                      (void);
 
 GDK_AVAILABLE_IN_3_18
-gpointer                  gdk_attachment_parameters_copy                     (gconstpointer            parameters,
-                                                                              gpointer                 unused);
+gpointer                  gdk_attachment_parameters_copy                     (gconstpointer                  parameters,
+                                                                              gpointer                       unused);
 
 GDK_AVAILABLE_IN_3_18
-void                      gdk_attachment_parameters_free                     (gpointer                 parameters);
+void                      gdk_attachment_parameters_free                     (gpointer                       parameters);
 
 GDK_AVAILABLE_IN_3_18
-void                      gdk_attachment_parameters_add_primary_constraint   (GdkAttachmentParameters *parameters,
-                                                                              GdkAttachmentVariable    variable,
-                                                                              gint                     value);
+void                      gdk_attachment_parameters_add_primary_constraint   (GdkAttachmentParameters       *parameters,
+                                                                              GdkAttachmentVariable          variable,
+                                                                              gint                           value);
 
 GDK_AVAILABLE_IN_3_18
-void                      gdk_attachment_parameters_add_secondary_constraint (GdkAttachmentParameters *parameters,
-                                                                              GdkAttachmentVariable    variable,
-                                                                              gint                     value);
+void                      gdk_attachment_parameters_add_secondary_constraint (GdkAttachmentParameters       *parameters,
+                                                                              GdkAttachmentVariable          variable,
+                                                                              gint                           value);
+
+GDK_AVAILABLE_IN_3_18
+void                      gdk_window_set_attachment_parameters               (GdkWindow                     *window,
+                                                                              const GdkAttachmentParameters *parameters);
 
 G_END_DECLS
 
