@@ -1893,19 +1893,42 @@ free_timeval (GTimeVal *val)
 }
 
 static void
+get_offsets (GtkMenu *menu,
+             gint    *horizontal_offset,
+             gint    *vertical_offset)
+{
+  GtkStyleContext *context;
+  GtkStateFlags state;
+  GtkBorder padding;
+
+  gtk_widget_style_get (GTK_WIDGET (menu),
+                        "horizontal-offset", horizontal_offset,
+                        "vertical-offset", vertical_offset,
+                        NULL);
+
+  context = gtk_widget_get_style_context (GTK_WIDGET (menu));
+  state = gtk_widget_get_state_flags (GTK_WIDGET (menu));
+  gtk_style_context_get_padding (context, state, &padding);
+
+  *vertical_offset -= padding.top;
+  *horizontal_offset += padding.left;
+}
+
+static void
 gtk_menu_item_real_popup_submenu (GtkWidget *widget,
                                   gboolean   remember_exact_time)
 {
   GtkMenuItem *menu_item = GTK_MENU_ITEM (widget);
   GtkMenuItemPrivate *priv = menu_item->priv;
-  GtkWidget *parent;
-
-  parent = gtk_widget_get_parent (widget);
+  GtkWidget *parent = gtk_widget_get_parent (widget);
+  GdkAttachmentParameters *parameters;
+  GtkWidget *attachment_widget;
+  GtkAttachmentOptions options;
+  GdkPoint offset = { 0 };
 
   if (gtk_widget_is_sensitive (priv->submenu) && parent)
     {
       gboolean take_focus;
-      GtkMenuPositionFunc menu_position_func;
 
       take_focus = gtk_menu_shell_get_take_focus (GTK_MENU_SHELL (parent));
       gtk_menu_shell_set_take_focus (GTK_MENU_SHELL (priv->submenu), take_focus);
@@ -1926,24 +1949,73 @@ gtk_menu_item_real_popup_submenu (GtkWidget *widget,
                              "gtk-menu-exact-popup-time", NULL);
         }
 
-      /* gtk_menu_item_position_menu positions the submenu from the
-       * menuitems position. If the menuitem doesn't have a window,
-       * that doesn't work. In that case we use the default
-       * positioning function instead which places the submenu at the
-       * mouse cursor.
-       */
-      if (gtk_widget_get_window (widget))
-        menu_position_func = gtk_menu_item_position_menu;
-      else
-        menu_position_func = NULL;
+      /* If the menu item has a window, attach the submenu to it.
+       * Otherwise, attach the submenu to the pointer device. */
 
-      gtk_menu_popup (GTK_MENU (priv->submenu),
-                      parent,
-                      widget,
-                      menu_position_func,
-                      menu_item,
-                      GTK_MENU_SHELL (parent)->priv->button,
-                      0);
+      if (gtk_widget_get_window (widget))
+        {
+          attachment_widget = widget;
+
+          switch (priv->submenu_placement)
+            {
+            case GTK_LEFT_RIGHT:
+              options = GTK_ATTACHMENT_ALIGN_TOP_EDGES
+                      | GTK_ATTACHMENT_ALIGN_VERTICALLY
+                      | GTK_ATTACHMENT_ATTACH_OPPOSITE_EDGE;
+
+              switch (priv->submenu_direction)
+                {
+                  case GTK_DIRECTION_LEFT:
+                    options |= GTK_ATTACHMENT_ATTACH_LEFT_EDGE;
+                    break;
+
+                  default:
+                    options |= GTK_ATTACHMENT_ATTACH_RIGHT_EDGE;
+                    break;
+                }
+
+              get_offsets (GTK_MENU (priv->submenu), &offset.x, &offset.y);
+
+              break;
+
+            default:
+              options = GTK_ATTACHMENT_ATTACH_BOTTOM_EDGE
+                      | GTK_ATTACHMENT_ATTACH_OPPOSITE_EDGE
+                      | GTK_ATTACHMENT_ALIGN_HORIZONTALLY;
+
+              switch (priv->submenu_direction)
+                {
+                  case GTK_DIRECTION_LEFT:
+                    options |= GTK_ATTACHMENT_ALIGN_RIGHT_EDGES;
+                    break;
+
+                  default:
+                    options |= GTK_ATTACHMENT_ALIGN_LEFT_EDGES;
+                    break;
+                }
+
+              break;
+            }
+        }
+      else
+        {
+          attachment_widget = NULL;
+          options = GTK_ATTACHMENT_ATTACH_CURSOR;
+        }
+
+      parameters = gtk_menu_attachment_parameters (GTK_MENU (priv->submenu),
+                                                   attachment_widget,
+                                                   NULL,
+                                                   options,
+                                                   &offset,
+                                                   NULL);
+
+      gtk_menu_popup_with_parameters (GTK_MENU (priv->submenu),
+                                      NULL,
+                                      parent,
+                                      GTK_MENU_SHELL (parent)->priv->button,
+                                      0,
+                                      parameters);
     }
 
   /* Enable themeing of the parent menu item depending on whether
@@ -2051,28 +2123,6 @@ _gtk_menu_item_popdown_submenu (GtkWidget *widget)
 
       gtk_widget_queue_draw (widget);
     }
-}
-
-static void
-get_offsets (GtkMenu *menu,
-             gint    *horizontal_offset,
-             gint    *vertical_offset)
-{
-  GtkStyleContext *context;
-  GtkStateFlags state;
-  GtkBorder padding;
-
-  gtk_widget_style_get (GTK_WIDGET (menu),
-                        "horizontal-offset", horizontal_offset,
-                        "vertical-offset", vertical_offset,
-                        NULL);
-
-  context = gtk_widget_get_style_context (GTK_WIDGET (menu));
-  state = gtk_widget_get_state_flags (GTK_WIDGET (menu));
-  gtk_style_context_get_padding (context, state, &padding);
-
-  *vertical_offset -= padding.top;
-  *horizontal_offset += padding.left;
 }
 
 static void
