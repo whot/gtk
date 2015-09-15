@@ -5681,6 +5681,374 @@ gdk_x11_window_show_window_menu (GdkWindow *window,
   return TRUE;
 }
 
+static gint
+gdk_attachment_constraint_get_axis (const GdkAttachmentConstraint *constraint)
+{
+  switch (constraint->variable)
+    {
+    case GDK_X_MIN:
+    case GDK_X_MID:
+    case GDK_X_MAX:
+      return 0;
+
+    case GDK_Y_MIN:
+    case GDK_Y_MID:
+    case GDK_Y_MAX:
+      return 1;
+
+    default:
+      return -1;
+    }
+}
+
+static gboolean
+gdk_attachment_constraint_is_satisfiable (const GdkAttachmentConstraint *constraint,
+                                          const GdkRectangle            *bounds,
+                                          const GdkPoint                *offset,
+                                          gint                           width,
+                                          gint                           height,
+                                          const GdkAttachmentPadding    *padding,
+                                          gint                          *axis,
+                                          gint                          *value)
+{
+  GdkPoint o = { 0 };
+  GdkAttachmentPadding p = { 0 };
+  gint a;
+  gint v;
+
+  if (!offset)
+    offset = &o;
+
+  if (!padding)
+    padding = &p;
+
+  if (!axis)
+    axis = &a;
+
+  if (!value)
+    value = &v;
+
+  switch (constraint->variable)
+    {
+    case GDK_X_MIN:
+      *axis = 0;
+      *value = offset->x + constraint->value - padding->left;
+      break;
+
+    case GDK_X_MID:
+      *axis = 0;
+      *value = offset->x + constraint->value - (width + 1) / 2;
+      break;
+
+    case GDK_X_MAX:
+      *axis = 0;
+      *value = offset->x + constraint->value - width + padding->right;
+      break;
+
+    case GDK_Y_MIN:
+      *axis = 1;
+      *value = offset->y + constraint->value - padding->top;
+      break;
+
+    case GDK_Y_MID:
+      *axis = 1;
+      *value = offset->y + constraint->value - (height + 1) / 2;
+      break;
+
+    case GDK_Y_MAX:
+      *axis = 1;
+      *value = offset->y + constraint->value - height + padding->bottom;
+      break;
+
+    default:
+      return FALSE;
+    }
+
+  if (!bounds)
+    return TRUE;
+
+  switch (*axis)
+    {
+    case 0:
+      return bounds->x <= *value + padding->left && *value + width - padding->right <= bounds->x + bounds->width;
+
+    case 1:
+      return bounds->y <= *value + padding->top && *value + height - padding->bottom <= bounds->y + bounds->height;
+
+    default:
+      return FALSE;
+    }
+}
+
+static void
+gdk_x11_window_set_attachment_parameters (GdkWindow                     *window,
+                                          const GdkAttachmentParameters *parameters)
+{
+  GdkScreen *screen;
+  gint monitor;
+  GdkRectangle bounds;
+  gint x;
+  gint y;
+  gint width;
+  gint height;
+  GList *i;
+  GList *j;
+  gint primary_axis;
+  gint secondary_axis;
+  gint value;
+  GdkPoint offset = { 0 };
+
+  if (!parameters)
+    return;
+
+  screen = gdk_window_get_screen (window);
+
+  if (parameters->has_rectangle)
+    {
+      x = parameters->rectangle.x + parameters->rectangle.width / 2;
+      y = parameters->rectangle.y + parameters->rectangle.height / 2;
+      monitor = gdk_screen_get_monitor_at_point (screen, x, y);
+    }
+  else
+    monitor = gdk_screen_get_primary_monitor (screen);
+
+  gdk_screen_get_monitor_workarea (screen, monitor, &bounds);
+  width = gdk_window_get_width (window);
+  height = gdk_window_get_height (window);
+
+  for (i = parameters->primary_constraints; i; i = i->next)
+    {
+      if (!gdk_attachment_constraint_is_satisfiable (i->data,
+                                                     &bounds,
+                                                     &parameters->parent_origin,
+                                                     width,
+                                                     height,
+                                                     &parameters->window_padding,
+                                                     &primary_axis,
+                                                     &value))
+        continue;
+
+      switch (primary_axis)
+        {
+        case 0:
+          x = value;
+          break;
+
+        case 1:
+          y = value;
+          break;
+        }
+
+      for (j = parameters->secondary_constraints; j; j = j->next)
+        {
+          if (gdk_attachment_constraint_get_axis (j->data) == primary_axis)
+            continue;
+
+          if (!gdk_attachment_constraint_is_satisfiable (j->data,
+                                                         &bounds,
+                                                         &parameters->parent_origin,
+                                                         width,
+                                                         height,
+                                                         &parameters->window_padding,
+                                                         &secondary_axis,
+                                                         &value))
+            continue;
+
+          switch (secondary_axis)
+            {
+            case 0:
+              x = value;
+              break;
+
+            case 1:
+              y = value;
+              break;
+            }
+
+          break;
+        }
+
+      if (j)
+        break;
+    }
+
+  if (!i)
+    {
+      for (i = parameters->primary_constraints; i; i = i->next)
+        {
+          if (!gdk_attachment_constraint_is_satisfiable (i->data,
+                                                         &bounds,
+                                                         &parameters->parent_origin,
+                                                         width,
+                                                         height,
+                                                         &parameters->window_padding,
+                                                         &primary_axis,
+                                                         &value))
+            continue;
+
+          switch (primary_axis)
+            {
+            case 0:
+              x = value;
+              break;
+
+            case 1:
+              y = value;
+              break;
+            }
+
+          for (j = parameters->secondary_constraints; j; j = j->next)
+            {
+              secondary_axis = gdk_attachment_constraint_get_axis (j->data);
+
+              if (secondary_axis == primary_axis)
+                continue;
+
+              switch (secondary_axis)
+                {
+                case 0:
+                  gdk_attachment_constraint_is_satisfiable (j->data,
+                                                            &bounds,
+                                                            &parameters->parent_origin,
+                                                            width,
+                                                            height,
+                                                            &parameters->window_padding,
+                                                            NULL,
+                                                            &x);
+                  break;
+
+                case 1:
+                  gdk_attachment_constraint_is_satisfiable (j->data,
+                                                            &bounds,
+                                                            &parameters->parent_origin,
+                                                            width,
+                                                            height,
+                                                            &parameters->window_padding,
+                                                            NULL,
+                                                            &y);
+                  break;
+                }
+
+              break;
+            }
+
+          if (j)
+            break;
+        }
+    }
+
+  if (!i)
+    {
+      for (i = parameters->primary_constraints; i; i = i->next)
+        {
+          primary_axis = gdk_attachment_constraint_get_axis (i->data);
+
+          for (j = parameters->secondary_constraints; j; j = j->next)
+            {
+              secondary_axis = gdk_attachment_constraint_get_axis (j->data);
+
+              if (secondary_axis == primary_axis)
+                continue;
+
+              switch (primary_axis)
+                {
+                case 0:
+                  gdk_attachment_constraint_is_satisfiable (i->data,
+                                                            &bounds,
+                                                            &parameters->parent_origin,
+                                                            width,
+                                                            height,
+                                                            &parameters->window_padding,
+                                                            NULL,
+                                                            &x);
+                  break;
+
+                case 1:
+                  gdk_attachment_constraint_is_satisfiable (i->data,
+                                                            &bounds,
+                                                            &parameters->parent_origin,
+                                                            width,
+                                                            height,
+                                                            &parameters->window_padding,
+                                                            NULL,
+                                                            &y);
+                  break;
+                }
+
+              switch (secondary_axis)
+                {
+                case 0:
+                  gdk_attachment_constraint_is_satisfiable (j->data,
+                                                            &bounds,
+                                                            &parameters->parent_origin,
+                                                            width,
+                                                            height,
+                                                            &parameters->window_padding,
+                                                            NULL,
+                                                            &x);
+                  break;
+
+                case 1:
+                  gdk_attachment_constraint_is_satisfiable (j->data,
+                                                            &bounds,
+                                                            &parameters->parent_origin,
+                                                            width,
+                                                            height,
+                                                            &parameters->window_padding,
+                                                            NULL,
+                                                            &y);
+                  break;
+                }
+
+              break;
+            }
+
+          if (j)
+            break;
+        }
+    }
+
+  if (!i)
+    {
+      if (parameters->has_rectangle)
+        {
+          x = parameters->rectangle.x + (parameters->rectangle.width - width) / 2;
+          y = parameters->rectangle.y + (parameters->rectangle.height - height) / 2;
+        }
+      else
+        {
+          x = bounds.x + (bounds.width - width) / 2;
+          y = bounds.y + (bounds.height - height) / 2;
+        }
+    }
+
+  if (x + width > bounds.x + bounds.width)
+    {
+      offset.x += bounds.x + bounds.width - width - x;
+      x = bounds.x + bounds.width - width;
+    }
+
+  if (x < bounds.x)
+    {
+      offset.x += bounds.x - x;
+      x = bounds.x;
+    }
+
+  if (y + height > bounds.y + bounds.height)
+    {
+      offset.y += bounds.y + bounds.height - height - y;
+      y = bounds.y + bounds.height - height;
+    }
+
+  if (y < bounds.y)
+    {
+      offset.y += bounds.y - y;
+      y = bounds.y;
+    }
+
+  gdk_window_move (window, x, y);
+}
+
 static void
 gdk_window_impl_x11_class_init (GdkWindowImplX11Class *klass)
 {
@@ -5771,4 +6139,5 @@ gdk_window_impl_x11_class_init (GdkWindowImplX11Class *klass)
   impl_class->create_gl_context = gdk_x11_window_create_gl_context;
   impl_class->invalidate_for_new_frame = gdk_x11_window_invalidate_for_new_frame;
   impl_class->get_unscaled_size = gdk_x11_window_get_unscaled_size;
+  impl_class->set_attachment_parameters = gdk_x11_window_set_attachment_parameters;
 }
