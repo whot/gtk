@@ -705,7 +705,11 @@ gdk_x11_display_translate_event (GdkEventTranslator *translator,
             }
 
 	  if (toplevel)
-            gdk_window_freeze_toplevel_updates (window);
+            {
+              toplevel->is_mapped = FALSE;
+
+              gdk_window_freeze_toplevel_updates (window);
+            }
 
           _gdk_x11_window_grab_check_unmap (window, xevent->xany.serial);
         }
@@ -729,7 +733,18 @@ gdk_x11_display_translate_event (GdkEventTranslator *translator,
 					 0);
 
 	  if (toplevel)
-	    gdk_window_thaw_toplevel_updates (window);
+            {
+              toplevel->is_mapped = TRUE;
+
+              if (toplevel->move_on_map)
+                {
+                  toplevel->move_on_map = FALSE;
+
+                  gdk_window_move (window, toplevel->initial_position.x, toplevel->initial_position.y);
+                }
+
+              gdk_window_thaw_toplevel_updates (window);
+            }
 	}
 
       break;

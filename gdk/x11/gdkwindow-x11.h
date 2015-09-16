@@ -147,6 +147,10 @@ struct _GdkToplevelX11
   guint pending_counter_value_is_extended : 1;
   guint configure_counter_value_is_extended : 1;
 
+  guint is_mapped : 1;
+  guint move_on_map : 1;
+  GdkPoint initial_position;
+
   gulong map_serial;	/* Serial of last transition from unmapped */
   
   cairo_surface_t *icon_pixmap;
