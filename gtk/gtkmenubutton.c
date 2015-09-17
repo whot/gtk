@@ -380,7 +380,10 @@ popup_menu (GtkMenuButton *menu_button,
             GdkEvent      *event)
 {
   GtkMenuButtonPrivate *priv = menu_button->priv;
-  GtkMenuPositionFunc func;
+  GdkAttachmentParameters *parameters;
+  GtkAttachmentOptions options;
+  gboolean is_left_to_right;
+  GtkWidget *toplevel;
   GdkDevice *device;
   guint button;
   guint32 time;
@@ -390,17 +393,6 @@ popup_menu (GtkMenuButton *menu_button,
 
   if (!priv->menu)
     return;
-
-  switch (priv->arrow_type)
-    {
-      case GTK_ARROW_LEFT:
-      case GTK_ARROW_RIGHT:
-        func = (GtkMenuPositionFunc) menu_position_side_func;
-        break;
-      default:
-        func = (GtkMenuPositionFunc) menu_position_up_down_func;
-        break;
-  }
 
   if (event != NULL &&
       gdk_event_get_screen (event) == gtk_widget_get_screen (GTK_WIDGET (menu_button)))
@@ -416,14 +408,135 @@ popup_menu (GtkMenuButton *menu_button,
       time = gtk_get_current_event_time ();
     }
 
-  gtk_menu_popup_for_device (GTK_MENU (priv->menu),
-                             device,
-                             NULL, NULL,
-                             func,
-                             GTK_WIDGET (menu_button),
-                             NULL,
-                             button,
-                             time);
+  is_left_to_right = gtk_widget_get_direction (GTK_WIDGET (menu_button)) != GTK_TEXT_DIR_RTL;
+
+  options = GTK_ATTACHMENT_ATTACH_OPPOSITE_EDGE
+          | GTK_ATTACHMENT_ALIGN_VERTICALLY
+          | GTK_ATTACHMENT_ALIGN_HORIZONTALLY;
+
+  switch (priv->arrow_type)
+    {
+    case GTK_ARROW_LEFT:
+      if (is_left_to_right)
+        options |= GTK_ATTACHMENT_ATTACH_LEFT_EDGE;
+      else
+        options |= GTK_ATTACHMENT_ATTACH_RIGHT_EDGE;
+
+      switch (gtk_widget_get_valign (priv->menu))
+        {
+        case GTK_ALIGN_END:
+          options |= GTK_ATTACHMENT_ALIGN_BOTTOM_EDGES;
+          break;
+
+        case GTK_ALIGN_CENTER:
+          break;
+
+        default:
+          options |= GTK_ATTACHMENT_ALIGN_TOP_EDGES;
+          break;
+        }
+
+      break;
+
+    case GTK_ARROW_RIGHT:
+      if (is_left_to_right)
+        options |= GTK_ATTACHMENT_ATTACH_RIGHT_EDGE;
+      else
+        options |= GTK_ATTACHMENT_ATTACH_LEFT_EDGE;
+
+      switch (gtk_widget_get_valign (priv->menu))
+        {
+        case GTK_ALIGN_END:
+          options |= GTK_ATTACHMENT_ALIGN_BOTTOM_EDGES;
+          break;
+
+        case GTK_ALIGN_CENTER:
+          break;
+
+        default:
+          options |= GTK_ATTACHMENT_ALIGN_TOP_EDGES;
+          break;
+        }
+
+      break;
+
+    case GTK_ARROW_UP:
+      options |= GTK_ATTACHMENT_ATTACH_TOP_EDGE;
+
+      switch (gtk_widget_get_halign (priv->menu))
+        {
+        case GTK_ALIGN_END:
+          if (is_left_to_right)
+            options |= GTK_ATTACHMENT_ALIGN_RIGHT_EDGES;
+          else
+            options |= GTK_ATTACHMENT_ALIGN_LEFT_EDGES;
+
+          break;
+
+        case GTK_ALIGN_CENTER:
+          break;
+
+        default:
+          if (is_left_to_right)
+            options |= GTK_ATTACHMENT_ALIGN_LEFT_EDGES;
+          else
+            options |= GTK_ATTACHMENT_ALIGN_RIGHT_EDGES;
+
+          break;
+        }
+
+      break;
+
+    default:
+      options |= GTK_ATTACHMENT_ATTACH_BOTTOM_EDGE;
+
+      /* In the common case the menu button is showing a dropdown menu, set the
+       * corresponding type hint on the toplevel, so the WM can omit the top side
+       * of the shadows. */
+
+      toplevel = gtk_widget_get_toplevel (priv->menu);
+
+      if (GTK_IS_WINDOW (toplevel))
+        gtk_window_set_type_hint (GTK_WINDOW (toplevel), GDK_WINDOW_TYPE_HINT_DROPDOWN_MENU);
+
+      switch (gtk_widget_get_halign (priv->menu))
+        {
+        case GTK_ALIGN_END:
+          if (is_left_to_right)
+            options |= GTK_ATTACHMENT_ALIGN_RIGHT_EDGES;
+          else
+            options |= GTK_ATTACHMENT_ALIGN_LEFT_EDGES;
+
+          break;
+
+        case GTK_ALIGN_CENTER:
+          break;
+
+        default:
+          if (is_left_to_right)
+            options |= GTK_ATTACHMENT_ALIGN_LEFT_EDGES;
+          else
+            options |= GTK_ATTACHMENT_ALIGN_RIGHT_EDGES;
+
+          break;
+        }
+
+      break;
+    }
+
+  parameters = gtk_menu_attachment_parameters (GTK_MENU (priv->menu),
+                                               priv->align_widget ? priv->align_widget : GTK_WIDGET (menu_button),
+                                               NULL,
+                                               options,
+                                               NULL,
+                                               NULL);
+
+  gtk_menu_popup_with_parameters (GTK_MENU (priv->menu),
+                                  device,
+                                  NULL,
+                                  button,
+                                  time,
+                                  parameters);
 }
 
 static void
