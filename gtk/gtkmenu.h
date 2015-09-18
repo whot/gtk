@@ -155,6 +155,28 @@ void       gtk_menu_popup_for_device      (GtkMenu             *menu,
                                            guint                button,
                                            guint32              activate_time);
 
+GDK_AVAILABLE_IN_3_20
+void       gtk_menu_update_parameters     (GtkMenu                 *menu,
+                                           GdkAttachmentParameters *parameters);
+
+GDK_AVAILABLE_IN_3_20
+void       gtk_menu_update_scroll_offset  (GdkWindow                     *window,
+                                           const GdkAttachmentParameters *parameters,
+                                           const GdkPoint                *position,
+                                           const GdkPoint                *offset,
+                                           GdkAttachmentOption            primary_option,
+                                           GdkAttachmentOption            secondary_option,
+                                           gpointer                       user_data);
+
+GDK_AVAILABLE_IN_3_20
+void       gtk_menu_popup_with_parameters (GtkMenu                 *menu,
+                                           GdkDevice               *device,
+                                           GtkWidget               *parent_menu_shell,
+                                           GtkWidget               *attachment_widget,
+                                           guint                    button,
+                                           guint32                  activate_time,
+                                           GdkAttachmentParameters *parameters);
+
 /* Position the menu according to its position function. Called
  * from gtkmenuitem.c when a menu-item changes its allocation
  */

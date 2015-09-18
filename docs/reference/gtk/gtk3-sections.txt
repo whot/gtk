@@ -2221,6 +2221,9 @@ gtk_menu_new_from_model
 gtk_menu_set_screen
 gtk_menu_reorder_child
 gtk_menu_attach
+gtk_menu_update_parameters
+gtk_menu_update_scroll_offset
+gtk_menu_popup_with_parameters
 gtk_menu_popup_for_device
 gtk_menu_popup
 gtk_menu_set_accel_group
