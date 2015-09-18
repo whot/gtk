@@ -33,6 +33,7 @@
 #include <gdk/gdktypes.h>
 #include <gdk/gdkevents.h>
 #include <gdk/gdkframeclock.h>
+#include <gdk/gdkattachmentparameters.h>
 
 G_BEGIN_DECLS
 
@@ -1074,6 +1075,10 @@ gboolean  gdk_window_show_window_menu          (GdkWindow      *window,
 GDK_AVAILABLE_IN_3_16
 GdkGLContext * gdk_window_create_gl_context    (GdkWindow      *window,
                                                 GError        **error);
+
+GDK_AVAILABLE_IN_3_20
+void       gdk_window_set_attachment_parameters (GdkWindow                     *window,
+                                                 const GdkAttachmentParameters *parameters);
 
 G_END_DECLS
 

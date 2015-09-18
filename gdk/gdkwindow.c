@@ -11519,3 +11519,27 @@ gdk_window_show_window_menu (GdkWindow *window,
   else
     return FALSE;
 }
+
+/**
+ * gdk_window_set_attachment_parameters:
+ * @window: (transfer none) (not nullable): a #GdkWindow
+ * @parameters: (transfer none) (nullable): information for positioning @window
+ *
+ * Moves @window to the best position according to @parameters. The best
+ * position is decided by the backend.
+ *
+ * Since: 3.20
+ */
+void
+gdk_window_set_attachment_parameters (GdkWindow                     *window,
+                                      const GdkAttachmentParameters *parameters)
+{
+  GdkWindowImplClass *impl_class;
+
+  g_return_if_fail (GDK_IS_WINDOW (window));
+
+  impl_class = GDK_WINDOW_IMPL_GET_CLASS (window->impl);
+
+  if (impl_class->set_attachment_parameters)
+    impl_class->set_attachment_parameters (window, parameters);
+}

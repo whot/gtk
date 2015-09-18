@@ -491,6 +491,7 @@ GdkWMDecoration
 gdk_window_set_functions
 GdkWMFunction
 gdk_get_default_root_window
+gdk_window_set_attachment_parameters
 
 <SUBSECTION>
 gdk_window_get_support_multidevice
