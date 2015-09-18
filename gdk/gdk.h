@@ -30,6 +30,7 @@
 #include <gdk/gdkconfig.h>
 #include <gdk/gdkversionmacros.h>
 #include <gdk/gdkapplaunchcontext.h>
+#include <gdk/gdkattachmentparameters.h>
 #include <gdk/gdkcairo.h>
 #include <gdk/gdkcursor.h>
 #include <gdk/gdkdevice.h>
