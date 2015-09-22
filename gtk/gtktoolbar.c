@@ -2572,81 +2572,78 @@ gtk_toolbar_real_style_changed (GtkToolbar     *toolbar,
 }
 
 static void
-menu_position_func (GtkMenu  *menu,
-		    gint     *x,
-		    gint     *y,
-		    gboolean *push_in,
-		    gpointer  user_data)
-{
-  GtkAllocation allocation;
-  GtkToolbar *toolbar = GTK_TOOLBAR (user_data);
-  GtkToolbarPrivate *priv = toolbar->priv;
-  GtkRequisition req;
-  GtkRequisition menu_req;
-  GdkRectangle monitor;
-  gint monitor_num;
-  GdkScreen *screen;
-
-  gtk_widget_get_preferred_size (priv->arrow_button,
-                                 &req, NULL);
-  gtk_widget_get_preferred_size (GTK_WIDGET (menu),
-                                 &menu_req, NULL);
-
-  screen = gtk_widget_get_screen (GTK_WIDGET (menu));
-  monitor_num = gdk_screen_get_monitor_at_window (screen,
-                                                  gtk_widget_get_window (priv->arrow_button));
-  if (monitor_num < 0)
-    monitor_num = 0;
-  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
-
-  gtk_widget_get_allocation (priv->arrow_button, &allocation);
-
-  gdk_window_get_origin (gtk_button_get_event_window (GTK_BUTTON (priv->arrow_button)), x, y);
-  if (priv->orientation == GTK_ORIENTATION_HORIZONTAL)
-    {
-      if (gtk_widget_get_direction (GTK_WIDGET (toolbar)) == GTK_TEXT_DIR_LTR) 
-	*x += allocation.width - req.width;
-      else 
-	*x += req.width - menu_req.width;
-
-      if ((*y + allocation.height + menu_req.height) <= monitor.y + monitor.height)
-	*y += allocation.height;
-      else if ((*y - menu_req.height) >= monitor.y)
-	*y -= menu_req.height;
-      else if (monitor.y + monitor.height - (*y + allocation.height) > *y)
-	*y += allocation.height;
-      else
-	*y -= menu_req.height;
-    }
-  else 
-    {
-      if (gtk_widget_get_direction (GTK_WIDGET (toolbar)) == GTK_TEXT_DIR_LTR) 
-	*x += allocation.width;
-      else 
-	*x -= menu_req.width;
-
-      if (*y + menu_req.height > monitor.y + monitor.height &&
-	  *y + allocation.height - monitor.y > monitor.y + monitor.height - *y)
-	*y += allocation.height - menu_req.height;
-    }
-
-  *push_in = FALSE;
-}
-
-static void
 show_menu (GtkToolbar     *toolbar,
 	   GdkEventButton *event)
 {
   GtkToolbarPrivate *priv = toolbar->priv;
+  GdkAttachmentParameters *parameters;
+  GtkRequisition minimum_size;
+  GtkAllocation allocation;
+  gboolean is_right_to_left;
 
   rebuild_menu (toolbar);
 
   gtk_widget_show_all (GTK_WIDGET (priv->menu));
 
-  gtk_menu_popup (priv->menu, NULL, NULL,
-		  menu_position_func, toolbar,
-		  event? event->button : 0,
-		  event? event->time : gtk_get_current_event_time());
+  parameters = gdk_attachment_parameters_new ();
+
+  gtk_menu_update_parameters (priv->menu, parameters);
+
+  is_right_to_left = gtk_widget_get_direction (GTK_WIDGET (toolbar)) == GTK_TEXT_DIR_RTL;
+  gdk_attachment_parameters_set_right_to_left (parameters, is_right_to_left);
+
+  gtk_widget_get_allocation (priv->arrow_button, &allocation);
+  gdk_window_get_origin (gtk_button_get_event_window (GTK_BUTTON (priv->arrow_button)), &allocation.x, &allocation.y);
+
+  switch (priv->orientation)
+    {
+    case GTK_ORIENTATION_VERTICAL:
+      gdk_attachment_parameters_add_primary_options (parameters,
+                                                     GDK_ATTACHMENT_ATTACH_FORWARD_EDGE,
+                                                     GDK_ATTACHMENT_ATTACH_BACKWARD_EDGE,
+                                                     GDK_ATTACHMENT_FORCE_FIRST_OPTION,
+                                                     NULL);
+
+      gdk_attachment_parameters_add_secondary_options (parameters,
+                                                       GDK_ATTACHMENT_ALIGN_TOP_EDGES,
+                                                       GDK_ATTACHMENT_ALIGN_BOTTOM_EDGES,
+                                                       GDK_ATTACHMENT_FORCE_FIRST_OPTION_IF_PRIMARY_FORCED,
+                                                       NULL);
+
+      break;
+
+    default:
+      gtk_widget_get_preferred_size (priv->arrow_button, &minimum_size, NULL);
+
+      allocation.x += minimum_size.width;
+      allocation.width -= 2 * minimum_size.width;
+
+      gdk_attachment_parameters_set_window_type_hint (parameters, GDK_WINDOW_TYPE_HINT_DROPDOWN_MENU);
+
+      gdk_attachment_parameters_add_primary_options (parameters,
+                                                     GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE,
+                                                     GDK_ATTACHMENT_ATTACH_TOP_EDGE,
+                                                     GDK_ATTACHMENT_FORCE_FIRST_OPTION,
+                                                     NULL);
+
+      gdk_attachment_parameters_add_secondary_options (parameters,
+                                                       GDK_ATTACHMENT_ATTACH_FORWARD_EDGE,
+                                                       GDK_ATTACHMENT_ATTACH_BACKWARD_EDGE,
+                                                       GDK_ATTACHMENT_FORCE_FIRST_OPTION_IF_PRIMARY_FORCED,
+                                                       NULL);
+
+      break;
+    }
+
+  gdk_attachment_parameters_set_attachment_rectangle (parameters, &allocation);
+
+  gtk_menu_popup_with_parameters (priv->menu,
+                                  NULL,
+                                  NULL,
+                                  NULL,
+                                  event ? event->button : 0,
+                                  event ? event->time : gtk_get_current_event_time (),
+                                  parameters);
 }
 
 static void
