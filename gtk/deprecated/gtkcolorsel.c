@@ -1421,40 +1421,6 @@ palette_set_color (GtkWidget         *drawing_area,
 }
 
 static void
-popup_position_func (GtkMenu   *menu,
-                     gint      *x,
-                     gint      *y,
-                     gboolean  *push_in,
-                     gpointer   user_data)
-{
-  GtkAllocation allocation;
-  GtkWidget *widget;
-  GtkRequisition req;
-  gint root_x, root_y;
-  GdkScreen *screen;
-
-  widget = GTK_WIDGET (user_data);
-
-  g_return_if_fail (gtk_widget_get_realized (widget));
-
-  gdk_window_get_origin (gtk_widget_get_window (widget),
-                         &root_x, &root_y);
-
-  gtk_widget_get_preferred_size (GTK_WIDGET (menu),
-                                 &req, NULL);
-  gtk_widget_get_allocation (widget, &allocation);
-
-  /* Put corner of menu centered on color cell */
-  *x = root_x + allocation.width / 2;
-  *y = root_y + allocation.height / 2;
-
-  /* Ensure sanity */
-  screen = gtk_widget_get_screen (widget);
-  *x = CLAMP (*x, 0, MAX (0, gdk_screen_get_width (screen) - req.width));
-  *y = CLAMP (*y, 0, MAX (0, gdk_screen_get_height (screen) - req.height));
-}
-
-static void
 save_color_selected (GtkWidget *menuitem,
                      gpointer   data)
 {
@@ -1479,6 +1445,7 @@ do_popup (GtkColorSelection *colorsel,
 {
   GtkWidget *menu;
   GtkWidget *mi;
+  GdkAttachmentParameters *parameters;
 
   g_object_set_data (G_OBJECT (drawing_area),
                      I_("gtk-color-sel"),
@@ -1497,9 +1464,29 @@ do_popup (GtkColorSelection *colorsel,
 
   gtk_widget_show_all (mi);
 
-  gtk_menu_popup (GTK_MENU (menu), NULL, NULL,
-                  popup_position_func, drawing_area,
-                  3, timestamp);
+  parameters = gdk_attachment_parameters_new ();
+
+  gtk_menu_update_parameters (GTK_MENU (menu), parameters);
+
+  gdk_attachment_parameters_add_primary_options (parameters,
+                                                 GDK_ATTACHMENT_ATTACH_BELOW_CENTER,
+                                                 GDK_ATTACHMENT_ATTACH_ABOVE_CENTER,
+                                                 GDK_ATTACHMENT_FORCE_FIRST_OPTION,
+                                                 NULL);
+
+  gdk_attachment_parameters_add_secondary_options (parameters,
+                                                   GDK_ATTACHMENT_ATTACH_FORWARD_OF_CENTER,
+                                                   GDK_ATTACHMENT_ATTACH_BACKWARD_OF_CENTER,
+                                                   GDK_ATTACHMENT_FORCE_FIRST_OPTION_IF_PRIMARY_FORCED,
+                                                   NULL);
+
+  gtk_menu_popup_with_parameters (GTK_MENU (menu),
+                                  NULL,
+                                  NULL,
+                                  drawing_area,
+                                  3,
+                                  timestamp,
+                                  parameters);
 }
 
 
