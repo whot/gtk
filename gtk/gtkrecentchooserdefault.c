@@ -1729,61 +1729,46 @@ recent_view_menu_build (GtkRecentChooserDefault *impl)
   recent_view_menu_ensure_state (impl);
 }
 
-/* taken from gtkfilechooserdefault.c */
-static void
-popup_position_func (GtkMenu   *menu,
-                     gint      *x,
-                     gint      *y,
-                     gboolean  *push_in,
-                     gpointer	user_data)
-{
-  GtkAllocation allocation;
-  GtkWidget *widget = GTK_WIDGET (user_data);
-  GdkScreen *screen = gtk_widget_get_screen (widget);
-  GtkRequisition req;
-  gint monitor_num;
-  GdkRectangle monitor;
-
-  if (G_UNLIKELY (!gtk_widget_get_realized (widget)))
-    return;
-
-  gdk_window_get_origin (gtk_widget_get_window (widget),
-                         x, y);
-
-  gtk_widget_get_preferred_size (GTK_WIDGET (menu),
-                                 &req, NULL);
-
-  gtk_widget_get_allocation (widget, &allocation);
-  *x += (allocation.width - req.width) / 2;
-  *y += (allocation.height - req.height) / 2;
-
-  monitor_num = gdk_screen_get_monitor_at_point (screen, *x, *y);
-  gtk_menu_set_monitor (menu, monitor_num);
-  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
-
-  *x = CLAMP (*x, monitor.x, monitor.x + MAX (0, monitor.width - req.width));
-  *y = CLAMP (*y, monitor.y, monitor.y + MAX (0, monitor.height - req.height));
-
-  *push_in = FALSE;
-}
-
-
 static void
 recent_view_menu_popup (GtkRecentChooserDefault *impl,
 			GdkEventButton          *event)
 {
+  GdkAttachmentParameters *parameters;
+
   recent_view_menu_build (impl);
   
   if (event)
-    gtk_menu_popup (GTK_MENU (impl->priv->recent_popup_menu),
-    		    NULL, NULL, NULL, NULL,
-    		    event->button, event->time);
+    gtk_menu_popup_with_parameters (GTK_MENU (impl->priv->recent_popup_menu),
+                                    NULL,
+                                    NULL,
+                                    NULL,
+                                    event->button,
+                                    event->time,
+                                    NULL);
   else
     {
-      gtk_menu_popup (GTK_MENU (impl->priv->recent_popup_menu),
-      		      NULL, NULL,
-      		      popup_position_func, impl->priv->recent_view,
-      		      0, GDK_CURRENT_TIME);
+      parameters = gdk_attachment_parameters_new ();
+
+      gtk_menu_update_parameters (GTK_MENU (impl->priv->recent_popup_menu), parameters);
+
+      gdk_attachment_parameters_add_primary_options (parameters,
+                                                     GDK_ATTACHMENT_CENTER_VERTICALLY,
+                                                     GDK_ATTACHMENT_FORCE_FIRST_OPTION,
+                                                     NULL);
+
+      gdk_attachment_parameters_add_secondary_options (parameters,
+                                                       GDK_ATTACHMENT_CENTER_HORIZONTALLY,
+                                                       GDK_ATTACHMENT_FORCE_FIRST_OPTION_IF_PRIMARY_FORCED,
+                                                       NULL);
+
+      gtk_menu_popup_with_parameters (GTK_MENU (impl->priv->recent_popup_menu),
+                                      NULL,
+                                      NULL,
+                                      impl->priv->recent_view,
+                                      0,
+                                      GDK_CURRENT_TIME,
+                                      parameters);
+
       gtk_menu_shell_select_first (GTK_MENU_SHELL (impl->priv->recent_popup_menu),
       				   FALSE);
     }
