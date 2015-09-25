@@ -1349,13 +1349,13 @@ do_popup_menu_for_process_tree_view (GtkWidget         *widget,
       event_time = gtk_get_current_event_time ();
     }
 
-  gtk_menu_popup (GTK_MENU (menu),
-                  NULL,
-                  widget,
-                  NULL,
-                  NULL,
-                  button,
-                  event_time);
+  gtk_menu_popup_with_parameters (GTK_MENU (menu),
+                                  NULL,
+                                  NULL,
+                                  NULL,
+                                  button,
+                                  event_time,
+                                  NULL);
 
   popped_up_menu = TRUE;
 
