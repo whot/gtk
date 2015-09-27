@@ -276,21 +276,6 @@ static void     gtk_combo_box_menu_hide            (GtkWidget        *menu,
 
 static void     gtk_combo_box_set_popup_widget     (GtkComboBox      *combo_box,
                                                     GtkWidget        *popup);
-static void     gtk_combo_box_menu_position_below  (GtkMenu          *menu,
-                                                    gint             *x,
-                                                    gint             *y,
-                                                    gint             *push_in,
-                                                    gpointer          user_data);
-static void     gtk_combo_box_menu_position_over   (GtkMenu          *menu,
-                                                    gint             *x,
-                                                    gint             *y,
-                                                    gint             *push_in,
-                                                    gpointer          user_data);
-static void     gtk_combo_box_menu_position        (GtkMenu          *menu,
-                                                    gint             *x,
-                                                    gint             *y,
-                                                    gint             *push_in,
-                                                    gpointer          user_data);
 
 static void     gtk_combo_box_unset_model          (GtkComboBox      *combo_box);
 
@@ -1730,186 +1715,6 @@ get_widget_padding_and_border (GtkWidget *widget,
 }
 
 static void
-gtk_combo_box_menu_position_below (GtkMenu  *menu,
-                                   gint     *x,
-                                   gint     *y,
-                                   gint     *push_in,
-                                   gpointer  user_data)
-{
-  GtkComboBox *combo_box = GTK_COMBO_BOX (user_data);
-  GtkAllocation child_allocation;
-  gint sx, sy;
-  GtkWidget *child;
-  GtkRequisition req;
-  GdkScreen *screen;
-  gint monitor_num;
-  GdkRectangle monitor;
-  GtkBorder padding;
-
-  /* FIXME: is using the size request here broken? */
-  child = gtk_bin_get_child (GTK_BIN (combo_box));
-
-  sx = sy = 0;
-
-  gtk_widget_get_allocation (child, &child_allocation);
-
-  if (!gtk_widget_get_has_window (child))
-    {
-      sx += child_allocation.x;
-      sy += child_allocation.y;
-    }
-
-  gdk_window_get_root_coords (gtk_widget_get_window (child),
-                              sx, sy, &sx, &sy);
-  get_widget_padding_and_border (GTK_WIDGET (combo_box), &padding);
-
-  if (gtk_widget_get_direction (GTK_WIDGET (combo_box)) == GTK_TEXT_DIR_RTL)
-    sx += padding.left;
-  else
-    sx -= padding.left;
-
-  if (combo_box->priv->popup_fixed_width)
-    gtk_widget_get_preferred_size (GTK_WIDGET (menu), &req, NULL);
-  else
-    gtk_widget_get_preferred_size (GTK_WIDGET (menu), NULL, &req);
-
-  if (gtk_widget_get_direction (GTK_WIDGET (combo_box)) == GTK_TEXT_DIR_LTR)
-    *x = sx;
-  else
-    *x = sx + child_allocation.width - req.width;
-  *y = sy;
-
-  screen = gtk_widget_get_screen (GTK_WIDGET (combo_box));
-  monitor_num = gdk_screen_get_monitor_at_window (screen,
-                                                  gtk_widget_get_window (GTK_WIDGET (combo_box)));
-  gdk_screen_get_monitor_workarea (screen, monitor_num, &monitor);
-
-  if (*x < monitor.x)
-    *x = monitor.x;
-  else if (*x + req.width > monitor.x + monitor.width)
-    *x = monitor.x + monitor.width - req.width;
-
-  if (monitor.y + monitor.height - *y - child_allocation.height >= req.height)
-    *y += child_allocation.height;
-  else if (*y - monitor.y >= req.height)
-    *y -= req.height;
-  else if (monitor.y + monitor.height - *y - child_allocation.height > *y - monitor.y)
-    *y += child_allocation.height;
-  else
-    *y -= req.height;
-
-   *push_in = FALSE;
-}
-
-static void
-gtk_combo_box_menu_position_over (GtkMenu  *menu,
-                                  gint     *x,
-                                  gint     *y,
-                                  gboolean *push_in,
-                                  gpointer  user_data)
-{
-  GtkComboBox    *combo_box;
-  GtkWidget      *active;
-  GtkWidget      *child;
-  GtkWidget      *widget;
-  GtkAllocation   allocation;
-  GtkAllocation   child_allocation;
-  GList          *children;
-  gint            screen_width;
-  gint            menu_xpos;
-  gint            menu_ypos;
-  gint            menu_width;
-
-  combo_box = GTK_COMBO_BOX (user_data);
-  widget = GTK_WIDGET (combo_box);
-
-  active = gtk_menu_get_active (GTK_MENU (combo_box->priv->popup_widget));
-
-  gtk_widget_get_allocation (widget, &allocation);
-
-  menu_xpos = allocation.x;
-  menu_ypos = allocation.y + allocation.height / 2 - 2;
-
-  if (combo_box->priv->popup_fixed_width)
-    gtk_widget_get_preferred_width (GTK_WIDGET (menu), &menu_width, NULL);
-  else
-    gtk_widget_get_preferred_width (GTK_WIDGET (menu), NULL, &menu_width);
-
-  if (active != NULL)
-    {
-      gtk_widget_get_allocation (active, &child_allocation);
-      menu_ypos -= child_allocation.height / 2;
-    }
-
-  children = GTK_MENU_SHELL (combo_box->priv->popup_widget)->priv->children;
-  while (children)
-    {
-      child = children->data;
-
-      if (active == child)
-        break;
-
-      if (gtk_widget_get_visible (child))
-        {
-          gtk_widget_get_allocation (child, &child_allocation);
-
-          menu_ypos -= child_allocation.height;
-        }
-
-      children = children->next;
-    }
-
-  if (gtk_widget_get_direction (widget) == GTK_TEXT_DIR_RTL)
-    menu_xpos = menu_xpos + allocation.width - menu_width;
-
-  gdk_window_get_root_coords (gtk_widget_get_window (widget),
-                              menu_xpos, menu_ypos,
-                              &menu_xpos, &menu_ypos);
-
-  /* Clamp the position on screen */
-  screen_width = gdk_screen_get_width (gtk_widget_get_screen (widget));
-  
-  if (menu_xpos < 0)
-    menu_xpos = 0;
-  else if ((menu_xpos + menu_width) > screen_width)
-    menu_xpos -= ((menu_xpos + menu_width) - screen_width);
-
-  *x = menu_xpos;
-  *y = menu_ypos;
-
-  *push_in = TRUE;
-}
-
-static void
-gtk_combo_box_menu_position (GtkMenu  *menu,
-                             gint     *x,
-                             gint     *y,
-                             gint     *push_in,
-                             gpointer  user_data)
-{
-  GtkComboBox *combo_box = GTK_COMBO_BOX (user_data);
-  GtkComboBoxPrivate *priv = combo_box->priv;
-  GtkWidget *menu_item;
-
-  if (priv->wrap_width > 0 || priv->cell_view == NULL)
-    gtk_combo_box_menu_position_below (menu, x, y, push_in, user_data);
-  else
-    {
-      /* FIXME handle nested menus better */
-      menu_item = gtk_menu_get_active (GTK_MENU (priv->popup_widget));
-      if (menu_item)
-        gtk_menu_shell_select_item (GTK_MENU_SHELL (priv->popup_widget),
-                                    menu_item);
-
-      gtk_combo_box_menu_position_over (menu, x, y, push_in, user_data);
-    }
-
-  if (!gtk_widget_get_visible (GTK_MENU (priv->popup_widget)->priv->toplevel))
-    gtk_window_set_type_hint (GTK_WINDOW (GTK_MENU (priv->popup_widget)->priv->toplevel),
-                              GDK_WINDOW_TYPE_HINT_COMBO);
-}
-
-static void
 gtk_combo_box_list_position (GtkComboBox *combo_box,
                              gint        *x,
                              gint        *y,
@@ -2132,6 +1937,15 @@ gtk_combo_box_menu_popup (GtkComboBox *combo_box,
   GtkTreePath *path;
   gint active_item;
   gint width, min_width, nat_width;
+  GdkAttachmentParameters *parameters;
+  GdkAttachmentBorder margin = { 0 };
+  GdkPoint offset = { 0 };
+  GtkWidget *attachment_widget;
+  gboolean is_right_to_left;
+  GtkWidget *active_widget;
+  GtkBorder border;
+  gint height;
+  GList *i;
 
   update_menu_sensitivity (combo_box, priv->popup_widget);
 
@@ -2166,10 +1980,93 @@ gtk_combo_box_menu_popup (GtkComboBox *combo_box,
       gtk_widget_set_size_request (priv->popup_widget, width, -1);
     }
 
-  gtk_menu_popup (GTK_MENU (priv->popup_widget),
-                  NULL, NULL,
-                  gtk_combo_box_menu_position, combo_box,
-                  button, activate_time);
+  parameters = gdk_attachment_parameters_new ();
+
+  gtk_menu_update_parameters (GTK_MENU (priv->popup_widget), parameters);
+
+  gdk_attachment_parameters_set_window_type_hint (parameters, GDK_WINDOW_TYPE_HINT_COMBO);
+
+  is_right_to_left = gtk_widget_get_direction (GTK_WIDGET (combo_box)) == GTK_TEXT_DIR_RTL;
+  gdk_attachment_parameters_set_right_to_left (parameters, is_right_to_left);
+
+  if (priv->wrap_width > 0 || priv->cell_view == NULL)
+    {
+      attachment_widget = gtk_bin_get_child (GTK_BIN (combo_box));
+
+      get_widget_padding_and_border (GTK_WIDGET (combo_box), &border);
+
+      margin.top = border.top;
+      margin.left = border.left;
+      margin.right = border.right;
+      margin.bottom = border.bottom;
+
+      gdk_attachment_parameters_set_attachment_margin (parameters, &margin);
+
+      gdk_attachment_parameters_add_primary_options (parameters,
+                                                     GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE,
+                                                     GDK_ATTACHMENT_ATTACH_TOP_EDGE,
+                                                     GDK_ATTACHMENT_FORCE_FIRST_OPTION,
+                                                     NULL);
+
+      gdk_attachment_parameters_add_secondary_options (parameters,
+                                                       GDK_ATTACHMENT_ALIGN_BACKWARD_EDGES,
+                                                       GDK_ATTACHMENT_ALIGN_FORWARD_EDGES,
+                                                       GDK_ATTACHMENT_FORCE_FIRST_OPTION_IF_PRIMARY_FORCED,
+                                                       NULL);
+    }
+  else
+    {
+      attachment_widget = GTK_WIDGET (combo_box);
+
+      active_widget = gtk_menu_get_active (GTK_MENU (priv->popup_widget));
+      i = GTK_MENU_SHELL (priv->popup_widget)->priv->children;
+
+      if (active_widget)
+        gtk_menu_shell_select_item (GTK_MENU_SHELL (priv->popup_widget), active_widget);
+      else if (i)
+        active_widget = i->data;
+
+      for (; i && i->data != active_widget; i = i->next)
+        {
+          if (gtk_widget_get_visible (i->data))
+            {
+              gtk_widget_get_preferred_height (i->data, &height, NULL);
+              offset.y -= height;
+            }
+        }
+
+      if (i && gtk_widget_get_visible (active_widget))
+        {
+          gtk_widget_get_preferred_height (active_widget, &height, NULL);
+          offset.y -= height / 2;
+        }
+
+      gdk_attachment_parameters_set_window_offset (parameters, &offset);
+
+      gdk_attachment_parameters_add_primary_options (parameters,
+                                                     GDK_ATTACHMENT_ATTACH_BELOW_CENTER,
+                                                     GDK_ATTACHMENT_FORCE_FIRST_OPTION,
+                                                     NULL);
+
+      gdk_attachment_parameters_add_secondary_options (parameters,
+                                                       GDK_ATTACHMENT_ALIGN_BACKWARD_EDGES,
+                                                       GDK_ATTACHMENT_ALIGN_FORWARD_EDGES,
+                                                       GDK_ATTACHMENT_FORCE_FIRST_OPTION_IF_PRIMARY_FORCED,
+                                                       NULL);
+    }
+
+  gdk_attachment_parameters_set_position_callback (parameters,
+                                                   gtk_menu_update_scroll_offset,
+                                                   g_object_ref (priv->popup_widget),
+                                                   g_object_unref);
+
+  gtk_menu_popup_with_parameters (GTK_MENU (priv->popup_widget),
+                                  NULL,
+                                  NULL,
+                                  attachment_widget,
+                                  button,
+                                  activate_time,
+                                  parameters);
 }
 
 static gboolean
