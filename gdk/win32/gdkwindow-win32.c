@@ -39,6 +39,7 @@
 #include "gdkvisualprivate.h"
 #include "gdkwin32window.h"
 #include "gdkglcontext-win32.h"
+#include "gdkattachmentparametersprivate.h"
 
 #include <cairo-win32.h>
 #include <dwmapi.h>
@@ -3468,6 +3469,7 @@ gdk_window_impl_win32_class_init (GdkWindowImplWin32Class *klass)
   impl_class->delete_property = _gdk_win32_window_delete_property;
   impl_class->create_gl_context = _gdk_win32_window_create_gl_context;
   impl_class->invalidate_for_new_frame = _gdk_win32_window_invalidate_for_new_frame;
+  impl_class->set_attachment_parameters = gdk_window_move_using_attachment_parameters;
 }
 
 HGDIOBJ
