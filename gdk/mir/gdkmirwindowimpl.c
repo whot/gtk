@@ -28,6 +28,7 @@
 #include "gdkintl.h"
 #include "gdkdisplayprivate.h"
 #include "gdkdeviceprivate.h"
+#include "gdkattachmentparametersprivate.h"
 
 #define GDK_MIR_WINDOW_IMPL_CLASS(klass)      (G_TYPE_CHECK_CLASS_CAST ((klass), GDK_TYPE_WINDOW_IMPL_MIR, GdkMirWindowImplClass))
 #define GDK_IS_WINDOW_IMPL_MIR_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE ((klass), GDK_TYPE_WINDOW_IMPL_MIR))
@@ -49,6 +50,11 @@ struct _GdkMirWindowImpl
   /* Desired surface attributes */
   GdkWindowTypeHint type_hint;
   MirSurfaceState surface_state;
+
+  /* Attachment rectangle */
+  gboolean has_attachment_rectangle;
+  GdkRectangle attachment_rectangle;
+  MirEdgeAttachment attachment_edge;
 
   /* Pattern for background */
   cairo_pattern_t *background;
@@ -170,6 +176,8 @@ create_mir_surface (GdkDisplay *display,
                     gint y,
                     gint width,
                     gint height,
+                    const GdkRectangle *attachment_rectangle,
+                    MirEdgeAttachment attachment_edge,
                     GdkWindowTypeHint type,
                     MirBufferUsage buffer_usage)
 {
@@ -216,17 +224,28 @@ create_mir_surface (GdkDisplay *display,
       case GDK_WINDOW_TYPE_HINT_POPUP_MENU:
       case GDK_WINDOW_TYPE_HINT_TOOLBAR:
       case GDK_WINDOW_TYPE_HINT_COMBO:
-        rect.left = x;
-        rect.top = y;
-        rect.width = 1;
-        rect.height = 1;
+        if (attachment_rectangle)
+          {
+            rect.left = attachment_rectangle->x;
+            rect.top = attachment_rectangle->y;
+            rect.width = attachment_rectangle->width;
+            rect.height = attachment_rectangle->height;
+          }
+        else
+          {
+            rect.left = x;
+            rect.top = y;
+            rect.width = 1;
+            rect.height = 1;
+          }
+
         spec = mir_connection_create_spec_for_menu (connection,
                                                     width,
                                                     height,
                                                     format,
                                                     parent_surface,
                                                     &rect,
-                                                    mir_edge_attachment_any);
+                                                    attachment_edge);
         break;
       case GDK_WINDOW_TYPE_HINT_SPLASHSCREEN:
       case GDK_WINDOW_TYPE_HINT_UTILITY:
@@ -239,10 +258,21 @@ create_mir_surface (GdkDisplay *display,
       case GDK_WINDOW_TYPE_HINT_DND:
       case GDK_WINDOW_TYPE_HINT_TOOLTIP:
       case GDK_WINDOW_TYPE_HINT_NOTIFICATION:
-        rect.left = x;
-        rect.top = y;
-        rect.width = 1;
-        rect.height = 1;
+        if (attachment_rectangle)
+          {
+            rect.left = attachment_rectangle->x;
+            rect.top = attachment_rectangle->y;
+            rect.width = attachment_rectangle->width;
+            rect.height = attachment_rectangle->height;
+          }
+        else
+          {
+            rect.left = x;
+            rect.top = y;
+            rect.width = 1;
+            rect.height = 1;
+          }
+
         spec = mir_connection_create_spec_for_tooltip (connection,
                                                        width,
                                                        height,
@@ -323,6 +353,8 @@ ensure_surface_full (GdkWindow *window,
   impl->surface = create_mir_surface (gdk_window_get_display (window), impl->transient_for,
                                       impl->transient_x, impl->transient_y,
                                       window->width, window->height,
+                                      impl->has_attachment_rectangle ? &impl->attachment_rectangle : NULL,
+                                      impl->attachment_edge,
                                       impl->type_hint,
                                       buffer_usage);
 
@@ -1496,6 +1528,86 @@ gdk_mir_window_get_mir_surface (GdkWindow *window)
   return impl->surface;
 }
 
+static GdkRectangle
+get_attachment_rectangle (const GdkAttachmentParameters *parameters)
+{
+  GdkRectangle rectangle = parameters->attachment_rectangle;
+
+  rectangle.x += parameters->attachment_origin.x;
+  rectangle.y += parameters->attachment_origin.y;
+
+  return rectangle;
+}
+
+static MirEdgeAttachment
+get_attachment_edge (const GdkAttachmentParameters *parameters)
+{
+  MirEdgeAttachment edge = 0;
+  GList *i;
+  GdkAttachmentOption option;
+
+  for (i = parameters->primary_options; i && edge != mir_edge_attachment_any; i = i->next)
+    {
+      option = GPOINTER_TO_INT (i->data);
+
+      switch (option)
+        {
+        case GDK_ATTACHMENT_ATTACH_TOP_EDGE:
+        case GDK_ATTACHMENT_ATTACH_BOTTOM_EDGE:
+          edge |= mir_edge_attachment_horizontal;
+          break;
+
+        case GDK_ATTACHMENT_ATTACH_LEFT_EDGE:
+        case GDK_ATTACHMENT_ATTACH_RIGHT_EDGE:
+        case GDK_ATTACHMENT_ATTACH_FORWARD_EDGE:
+        case GDK_ATTACHMENT_ATTACH_BACKWARD_EDGE:
+          edge |= mir_edge_attachment_vertical;
+          break;
+
+        default:
+          break;
+        }
+    }
+
+  return edge;
+}
+
+static void
+gdk_mir_window_impl_set_attachment_parameters (GdkWindow                     *window,
+                                               const GdkAttachmentParameters *parameters)
+{
+  GdkMirWindowImpl *impl = GDK_MIR_WINDOW_IMPL (window->impl);
+  GdkRectangle rectangle;
+  MirEdgeAttachment edge;
+
+  if (!parameters || !parameters->has_attachment_rectangle)
+    {
+      if (impl->has_attachment_rectangle)
+        {
+          impl->has_attachment_rectangle = FALSE;
+          ensure_no_surface (window);
+        }
+
+      return;
+    }
+
+  rectangle = get_attachment_rectangle (parameters);
+  edge = get_attachment_edge (parameters);
+
+  if (impl->has_attachment_rectangle &&
+      rectangle.x == impl->attachment_rectangle.x &&
+      rectangle.y == impl->attachment_rectangle.y &&
+      rectangle.width == impl->attachment_rectangle.width &&
+      rectangle.height == impl->attachment_rectangle.height &&
+      edge == impl->attachment_edge)
+    return;
+
+  impl->has_attachment_rectangle = TRUE;
+  impl->attachment_rectangle = rectangle;
+  impl->attachment_edge = edge;
+  ensure_no_surface (window);
+}
+
 static void
 gdk_mir_window_impl_class_init (GdkMirWindowImplClass *klass)
 {
@@ -1586,4 +1698,5 @@ gdk_mir_window_impl_class_init (GdkMirWindowImplClass *klass)
   impl_class->set_shadow_width = gdk_mir_window_impl_set_shadow_width;
   impl_class->create_gl_context = gdk_mir_window_impl_create_gl_context;
   impl_class->invalidate_for_new_frame = gdk_mir_window_impl_invalidate_for_new_frame;
+  impl_class->set_attachment_parameters = gdk_mir_window_impl_set_attachment_parameters;
 }
