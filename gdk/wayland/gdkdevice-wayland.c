@@ -37,6 +37,7 @@
 #include <sys/mman.h>
 
 typedef struct _GdkWaylandTouchData GdkWaylandTouchData;
+typedef struct _GdkWaylandScrollData GdkWaylandScrollData;
 
 struct _GdkWaylandTouchData
 {
@@ -46,6 +47,14 @@ struct _GdkWaylandTouchData
   GdkWindow *window;
   uint32_t touch_down_serial;
   guint initial_touch : 1;
+};
+
+struct _GdkWaylandScrollData
+{
+    guint32 time;
+    gdouble delta_x, delta_y;
+    int32_t discrete_x, discrete_y;
+    int32_t discrete_stacked;
 };
 
 struct _GdkWaylandDeviceData
@@ -108,6 +117,9 @@ struct _GdkWaylandDeviceData
   /* Some tracking on gesture events */
   guint gesture_n_fingers;
   gdouble gesture_scale;
+
+  /* Accumulated scroll event data from an axis_frame */
+  GdkWaylandScrollData scroll;
 };
 
 struct _GdkWaylandDevice
@@ -1066,6 +1078,40 @@ pointer_handle_button (void              *data,
 }
 
 static void
+flush_scroll_data (GdkWaylandDeviceData *device, GdkWaylandScrollData *scroll)
+{
+  GdkWaylandDisplay *display = GDK_WAYLAND_DISPLAY (device->display);
+  GdkEvent *event;
+
+  event = gdk_event_new (GDK_SCROLL);
+  event->scroll.window = g_object_ref (device->pointer_focus);
+  gdk_event_set_device (event, device->master_pointer);
+  gdk_event_set_source_device (event, device->pointer);
+  event->scroll.time = scroll->time;
+  event->scroll.direction = GDK_SCROLL_SMOOTH;
+  event->scroll.state = device->button_modifiers | device->key_modifiers;
+  gdk_event_set_screen (event, display->screen);
+
+  /* prefer discrete values over calculated ones */
+  event->scroll.delta_x = scroll->discrete_x ? scroll->discrete_x : scroll->delta_x;
+  event->scroll.delta_y = scroll->discrete_y ? scroll->discrete_y : scroll->delta_y;
+
+  get_coordinates (device,
+                   &event->scroll.x,
+                   &event->scroll.y,
+                   &event->scroll.x_root,
+                   &event->scroll.y_root);
+
+  _gdk_wayland_display_deliver_event (device->display, event);
+
+  scroll->delta_x = 0;
+  scroll->delta_y = 0;
+  scroll->discrete_x = 0;
+  scroll->discrete_y = 0;
+  scroll->discrete_stacked = 0;
+}
+
+static void
 pointer_handle_axis (void              *data,
                      struct wl_pointer *pointer,
                      uint32_t           time,
@@ -1073,9 +1119,8 @@ pointer_handle_axis (void              *data,
                      wl_fixed_t         value)
 {
   GdkWaylandDeviceData *device = data;
+  GdkWaylandScrollData *scroll = &device->scroll;
   GdkWaylandDisplay *display = GDK_WAYLAND_DISPLAY (device->display);
-  GdkEvent *event;
-  gdouble delta_x, delta_y;
 
   if (!device->pointer_focus)
     return;
@@ -1084,40 +1129,110 @@ pointer_handle_axis (void              *data,
   switch (axis)
     {
     case WL_POINTER_AXIS_VERTICAL_SCROLL:
-      delta_x = 0;
-      delta_y = wl_fixed_to_double (value) / 10.0;
+      scroll->delta_y = wl_fixed_to_double (value) / 10.0;
+      if (scroll->discrete_stacked)
+        scroll->discrete_x = scroll->discrete_stacked;
       break;
     case WL_POINTER_AXIS_HORIZONTAL_SCROLL:
-      delta_x = wl_fixed_to_double (value) / 10.0;
-      delta_y = 0;
+      scroll->delta_x = wl_fixed_to_double (value) / 10.0;
+      if (scroll->discrete_stacked)
+        scroll->discrete_y = scroll->discrete_stacked;
       break;
     default:
       g_return_if_reached ();
     }
 
-  device->time = time;
-  event = gdk_event_new (GDK_SCROLL);
-  event->scroll.window = g_object_ref (device->pointer_focus);
-  gdk_event_set_device (event, device->master_pointer);
-  gdk_event_set_source_device (event, device->pointer);
-  event->scroll.time = time;
-  event->scroll.direction = GDK_SCROLL_SMOOTH;
-  event->scroll.delta_x = delta_x;
-  event->scroll.delta_y = delta_y;
-  event->scroll.state = device->button_modifiers | device->key_modifiers;
-  gdk_event_set_screen (event, display->screen);
+  scroll->discrete_stacked = 0;
 
-  get_coordinates (device,
-                   &event->scroll.x,
-                   &event->scroll.y,
-                   &event->scroll.x_root,
-                   &event->scroll.y_root);
+  device->time = time;
+  scroll->time = time;
 
   GDK_NOTE (EVENTS,
             g_message ("scroll %f %f, device %p",
-                       event->scroll.delta_x, event->scroll.delta_y, device));
+                       scroll->delta_x, scroll->delta_y, device));
 
-  _gdk_wayland_display_deliver_event (device->display, event);
+  if (display->seat_version < WL_SEAT_POINTER_HAS_AXIS_FRAME)
+    flush_scroll_data (device, scroll);
+}
+
+static void
+pointer_handle_axis_frame (void              *data,
+                           struct wl_pointer *pointer)
+{
+  GdkWaylandDeviceData *device = data;
+  GdkWaylandScrollData *scroll = &device->scroll;
+
+  if (!device->pointer_focus)
+    return;
+
+  GDK_NOTE (EVENTS,
+            g_message ("axis frame, device %p\n", device));
+
+  flush_scroll_data (device, scroll);
+}
+
+static void
+pointer_handle_axis_source(void              *data,
+                           struct wl_pointer *pointer,
+                           enum wl_pointer_axis_source source)
+{
+  GdkWaylandDeviceData *device = data;
+
+  if (!device->pointer_focus)
+    return;
+
+  /* FIXME: set the source */
+
+  GDK_NOTE (EVENTS,
+            g_message ("axis source %d, device %p\n", source, device));
+}
+
+static void
+pointer_handle_axis_stop (void              *data,
+                          struct wl_pointer *pointer,
+                          uint32_t           time,
+                          uint32_t           axis)
+{
+  GdkWaylandDeviceData *device = data;
+  GdkWaylandScrollData *scroll = &device->scroll;
+
+  if (!device->pointer_focus)
+    return;
+
+  device->time = time;
+  scroll->time = time;
+
+  switch (axis)
+    {
+    case WL_POINTER_AXIS_VERTICAL_SCROLL:
+      scroll->delta_y = 0;
+      break;
+    case WL_POINTER_AXIS_HORIZONTAL_SCROLL:
+      scroll->delta_x = 0;
+      break;
+    default:
+      g_return_if_reached ();
+    }
+
+  GDK_NOTE (EVENTS,
+            g_message ("axis stop, device %p\n", device));
+}
+
+static void
+pointer_handle_axis_discrete(void              *data,
+                             struct wl_pointer *pointer,
+                             int32_t           value)
+{
+  GdkWaylandDeviceData *device = data;
+  GdkWaylandScrollData *scroll = &device->scroll;
+
+  if (!device->pointer_focus)
+    return;
+
+  scroll->discrete_stacked = value;
+
+  GDK_NOTE (EVENTS,
+            g_message ("axis discrete %d, device %p\n", value, device));
 }
 
 static void
@@ -1892,6 +2007,10 @@ static const struct wl_pointer_listener pointer_listener = {
   pointer_handle_motion,
   pointer_handle_button,
   pointer_handle_axis,
+  pointer_handle_axis_frame,
+  pointer_handle_axis_source,
+  pointer_handle_axis_stop,
+  pointer_handle_axis_discrete,
 };
 
 static const struct wl_keyboard_listener keyboard_listener = {
