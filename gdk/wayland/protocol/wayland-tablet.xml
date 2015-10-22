@@ -60,12 +60,18 @@
 	numbers for each tool, then the uniqueness of each tool object cannot
 	be guaranteed. On tablets where the serial number is not reported, the
 	"tool_serial" argument will always be 0.
+
+	If multiple tablets are available in the same seat and the tool is
+	uniquely identifiable by the serial number, that tool may move
+	between tablets.
+
+	This event is sent before a wl_tablet.proximity_in event.
       </description>
       <arg name="id" type="new_id" interface="wl_tablet_tool" summary="the newly added tablet tool"/>
       <arg name="tablet" type="object" interface="wl_tablet" summary="The tablet that the tool was seen with"/>
       <arg name="tool_type" type="uint" summary="the physical tool type"/>
       <arg name="tool_serial" type="uint" summary="the unique serial number of the tool"/>
-      <arg name="extra_axes" type="uint" summary="A bitfield of all of the extra axes the tablet supports"/>
+      <arg name="extra_axes" type="uint" summary="a bitfield of all of the extra axes the tool supports"/>
     </event>
 
     <event name="seat">
@@ -112,6 +118,9 @@
     <enum name="axis_flag">
       <description summary="a group of additional axes for a tablet">
 	Describes a group of additional axes on a tablet.
+
+	Any tool must provide x and y values, extra axes are
+	device-specific.
       </description>
       <entry name="tilt" value="1" summary="Tilt axes"/>
       <entry name="pressure" value="2" summary="Pressure axis"/>
@@ -136,8 +145,8 @@
   </interface>
 
   <interface name="wl_tablet" version="1">
-    <description summary="drawing tablet device">
-      The wl_tablet interface represents one drawing tablet device.
+    <description summary="graphics tablet device">
+      The wl_tablet interface represents one graphics tablet device.
 
       The wl_tablet interface generates axis events, enter, and leave events for
       the surfaces that the tool is held over and button events for the buttons
@@ -254,9 +263,9 @@
     <event name="frame">
       <description summary="frame event">
 	Marks the end of a series of axis updates from the tablet. Motion,
-	pressure, distance, and tilt events are all axis events. Axis updates
-	are received from drawing tablets at the same time, so the frame event
-	may be used to separate each individual series of axis updates.
+	pressure, distance, and tilt events are all axis events. The wayland
+	protocol requires axis updates to be sent sequentially, however all
+	events within a frame should be considered one hardware event.
       </description>
     </event>
 
