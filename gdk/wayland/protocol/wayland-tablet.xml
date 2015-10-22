@@ -149,8 +149,8 @@
       </description>
     </event>
 
-    <request name="release" type="destructor">
-      <description summary="release the memory for the tool object">
+    <request name="destroy" type="destructor">
+      <description summary="destroy the tool object">
 	This destroys the client's resource for this tool object. If the tool
 	comes back into proximity, a new resource will be created for the
 	client and associated with the tool.
@@ -296,8 +296,8 @@
       </description>
     </event>
 
-    <request name="release" type="destructor">
-      <description summary="release the tablet object"/>
+    <request name="destroy" type="destructor">
+      <description summary="destroy the tablet object"/>
     </request>
 
     <request name="set_cursor">
