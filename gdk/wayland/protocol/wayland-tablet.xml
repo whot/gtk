@@ -227,7 +227,7 @@
 	event is normalized to a value between 0 and 65535.
       </description>
       <arg name="time" type="uint" summary="The time of the event with millisecond granularity"/>
-      <arg name="pressure" type="fixed" summary="The current pressure value"/>
+      <arg name="pressure" type="uint" summary="The current pressure value"/>
     </event>
 
     <event name="distance">
@@ -236,7 +236,7 @@
 	event is normalized to a value between 0 and 65535.
       </description>
       <arg name="time" type="uint" summary="The time of the event with millisecond granularity"/>
-      <arg name="distance" type="fixed" summary="The current distance value"/>
+      <arg name="distance" type="uint" summary="The current distance value"/>
     </event>
 
     <event name="tilt">
@@ -245,8 +245,8 @@
 	value is normalized between -65535 and 65535.
       </description>
       <arg name="time" type="uint" summary="The time of the event with millisecond granularity"/>
-      <arg name="tilt_x" type="fixed" summary="The current value of the X tilt axis"/>
-      <arg name="tilt_y" type="fixed" summary="The current value of the Y tilt axis"/>
+      <arg name="tilt_x" type="int" summary="The current value of the X tilt axis"/>
+      <arg name="tilt_y" type="int" summary="The current value of the Y tilt axis"/>
     </event>
 
     <event name="button">
