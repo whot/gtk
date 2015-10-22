@@ -95,7 +95,6 @@
         a wl_tablet.proximity_in event.
       </description>
       <arg name="id" type="new_id" interface="wl_tablet_tool" summary="the newly added tablet tool"/>
-      <arg name="tablet" type="object" interface="wl_tablet" summary="The tablet that the tool was seen with"/>
       <arg name="tool_type" type="uint" summary="the physical tool type"/>
       <arg name="tool_serial" type="uint" summary="the unique serial number of the tool"/>
       <arg name="extra_axes" type="uint" summary="a bitfield of all of the extra axes the tool supports"/>
