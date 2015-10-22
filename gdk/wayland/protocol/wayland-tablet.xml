@@ -53,7 +53,7 @@
     <description summary="controller object for graphic tablet devices">
       An object that provides access to the graphics tablets available on this
       seat. After binding to this interface, the compositor sends a set of
-      wl_tablet_seat.device_added and wl_tablet_seat.tool_added events.
+      wl_tablet_seat.tablet_added and wl_tablet_seat.tool_added events.
     </description>
 
     <enum name="tablet_type">
@@ -66,7 +66,7 @@
       <entry name="display" value="2" summary="The tablet is a display tablet, such as a Cintiq"/>
     </enum>
 
-    <event name="device_added">
+    <event name="tablet_added">
       <description summary="new device notification"/>
       <arg name="id" type="new_id" interface="wl_tablet" summary="the newly added graphics tablet"/>
       <arg name="name" type="string" summary="the device name"/>
