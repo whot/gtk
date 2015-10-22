@@ -29,7 +29,31 @@
   <interface name="wl_tablet_manager" version="1">
     <description summary="controller object for graphic tablet devices">
       An object that provides access to the graphics tablets available on this
-      system.
+      system. Any tablet is associated with a seat, to get access to the
+      actual tablets, use wl_tablet_manager.get_tablet_seat.
+    </description>
+
+    <request name="get_tablet_seat">
+      <description summary="get the tablet seat">
+        Get the wl_tablet_seat object for the given seat. This object
+        provides access to all graphics tablets in this seat.
+      </description>
+      <arg name="tablet_seat" type="new_id" interface="wl_tablet_seat"/>
+      <arg name="seat" type="object" interface="wl_seat" summary="The wl_seat object to retrieve the tablets for" />
+    </request>
+
+    <request name="destroy" type="destructor">
+      <description summary="release the memory for the tablet manager object">
+	This destroys the resources associated with the tablet manager.
+      </description>
+    </request>
+  </interface>
+
+  <interface name="wl_tablet_seat" version="1">
+    <description summary="controller object for graphic tablet devices">
+      An object that provides access to the graphics tablets available on this
+      seat. After binding to this interface, the compositor sends a set of
+      wl_tablet_seat.device_added and wl_tablet_seat.tool_added events.
     </description>
 
     <enum name="tablet_type">
@@ -56,6 +80,7 @@
 	This event is sent whenever a tool that has not previously been used
 	with a tablet comes into use. This provides the information about the
 	tool, along with a wl_tablet_tool object that is unique to this tool.
+
 	If the tablet the tool is being used with does not report the serial
 	numbers for each tool, then the uniqueness of each tool object cannot
 	be guaranteed. On tablets where the serial number is not reported, the
@@ -65,7 +90,7 @@
 	uniquely identifiable by the serial number, that tool may move
 	between tablets.
 
-	This event is sent before a wl_tablet.proximity_in event.
+	This event is sent once when a tool gets into proximity of a before a wl_tablet.proximity_in event.
       </description>
       <arg name="id" type="new_id" interface="wl_tablet_tool" summary="the newly added tablet tool"/>
       <arg name="tablet" type="object" interface="wl_tablet" summary="The tablet that the tool was seen with"/>
@@ -74,17 +99,6 @@
       <arg name="extra_axes" type="uint" summary="a bitfield of all of the extra axes the tool supports"/>
     </event>
 
-    <event name="seat">
-      <description summary="the seat associated with the tablet manager">
-	For various functions with the weston desktop shell, a input seat of
-	some sort is required. Because tablets are not officially part of the
-	wayland protocol yet, we can't grab the tablet manager resource from
-	the seat like we would a pointer or a touchscreen. Therefore, an event
-	must be sent that contains a pointer to the wl_seat object that the
-	client is using that is associated with the tablet manager.
-      </description>
-      <arg name="seat" type="object" interface="wl_seat" summary="The wl_seat object for the tablet manager"/>
-    </event>
   </interface>
 
   <interface name="wl_tablet_tool" version="1">
