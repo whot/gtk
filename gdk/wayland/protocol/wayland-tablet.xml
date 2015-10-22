@@ -3,6 +3,7 @@
 
   <copyright>
     Copyright 2014 © Stephen "Lyude" Chandler Paul
+    Copyright 2015 © Red Hat, Inc.
 
     Permission to use, copy, modify, distribute, and sell this
     software and its documentation for any purpose is hereby granted
@@ -35,8 +36,8 @@
 
     <request name="get_tablet_seat">
       <description summary="get the tablet seat">
-        Get the wl_tablet_seat object for the given seat. This object
-        provides access to all graphics tablets in this seat.
+	Get the wl_tablet_seat object for the given seat. This object
+	provides access to all graphics tablets in this seat.
       </description>
       <arg name="tablet_seat" type="new_id" interface="wl_tablet_seat"/>
       <arg name="seat" type="object" interface="wl_seat" summary="The wl_seat object to retrieve the tablets for" />
@@ -72,7 +73,7 @@
       <arg name="name" type="string" summary="the device name"/>
       <arg name="vid" type="uint" summary="vendor id"/>
       <arg name="pid" type="uint" summary="product id"/>
-      <arg name="type" type="uint"/>
+      <arg name="type" type="uint" summary="the tablet type (internal, external, ...)"/>
     </event>
 
     <event name="tool_added">
@@ -90,7 +91,8 @@
 	uniquely identifiable by the serial number, that tool may move
 	between tablets.
 
-	This event is sent once when a tool gets into proximity of a before a wl_tablet.proximity_in event.
+        This event is sent once when a tool gets into proximity of a before
+        a wl_tablet.proximity_in event.
       </description>
       <arg name="id" type="new_id" interface="wl_tablet_tool" summary="the newly added tablet tool"/>
       <arg name="tablet" type="object" interface="wl_tablet" summary="The tablet that the tool was seen with"/>
@@ -181,6 +183,10 @@
 
 	This event can be received when the tool has moved from one surface to
 	another, or when the tool has come back into proximity.
+
+	Any button events sent within the same wl_tablet.frame as a
+	proximity_in event indicate the button state of the tool at the time
+	of proximity in.
       </description>
 
       <arg name="serial" type="uint"/>
@@ -194,12 +200,15 @@
 	Notification that this tablet's tool has either left proximity, or is no
 	longer focused on a certain surface.
 
-	In addition, when the tablet tool leaves proximity of the tablet, a set
-	of button release events will be sent for each button that was held
-	down on the tablet. If the tool stays within proximity of the tablet,
-	but the focus changes from one surface to another, a button release
-	event will not be sent until the button is actually released or the
-	tool leaves the proximity of the tablet.
+	When the tablet tool leaves proximity of the tablet,
+	button release events are sent for each button that was held
+	down on the tablet. These events are sent in the same
+	wl_tablet.frame of the proximity_out event.
+
+	If the tool stays within proximity of the tablet, but the focus
+	changes from one surface to another, a button release event may not
+	be sent until the button is actually released or the tool leaves the
+	proximity of the tablet.
       </description>
 
       <arg name="time" type="uint" summary="The time of the event with millisecond granularity"/>
@@ -276,10 +285,10 @@
 
     <event name="frame">
       <description summary="frame event">
-	Marks the end of a series of axis updates from the tablet. Motion,
-	pressure, distance, and tilt events are all axis events. The wayland
-	protocol requires axis updates to be sent sequentially, however all
-	events within a frame should be considered one hardware event.
+	Marks the end of a series of axis and/or button updates from the
+	tablet. The wayland protocol requires axis updates to be sent
+	sequentially, however all events within a frame should be considered
+	one hardware event.
       </description>
     </event>
 
