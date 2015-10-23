@@ -47,6 +47,7 @@ G_BEGIN_DECLS
 #define GDK_WAYLAND_THEME_SCALES_COUNT GDK_WAYLAND_MAX_THEME_SCALE
 
 #define GDK__WL_POINTER_GESTURES_VERSION 1
+#define GDK_WL_TABLET_MANAGER_VERSION 1
 
 typedef struct _GdkWaylandSelection GdkWaylandSelection;
 
@@ -75,6 +76,7 @@ struct _GdkWaylandDisplay
   struct wl_data_device_manager *data_device_manager;
   struct wl_subcompositor *subcompositor;
   struct _wl_pointer_gestures *pointer_gestures;
+  struct wl_tablet_manager *tablet_manager;
 
   GList *async_roundtrips;
 
