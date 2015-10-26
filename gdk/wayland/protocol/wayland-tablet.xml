@@ -121,6 +121,14 @@
       support this capability, then the tool cannot be guaranteed to be unique.
     </description>
 
+    <request name="destroy" type="destructor">
+      <description summary="destroy the tool object">
+	This destroys the client's resource for this tool object. If the tool
+	comes back into proximity, a new resource will be created for the
+	client and associated with the tool.
+      </description>
+    </request>
+
     <enum name="type">
       <description summary="a physical tool type">
 	Describes the physical type of a tool.
@@ -190,14 +198,6 @@
 	the object.
       </description>
     </event>
-
-    <request name="destroy" type="destructor">
-      <description summary="destroy the tool object">
-	This destroys the client's resource for this tool object. If the tool
-	comes back into proximity, a new resource will be created for the
-	client and associated with the tool.
-      </description>
-    </request>
   </interface>
 
   <interface name="wl_tablet" version="1">
@@ -208,6 +208,49 @@
       the surfaces that the tool is held over and button events for the buttons
       on a tablet tool.
     </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the tablet object"/>
+    </request>
+
+    <request name="set_cursor">
+      <description summary="set the tablet tool's surface">
+	Sets the surface of the pointer used for the tablet's tool object. This
+	surface is only shown when the tool is in proximity of the tablet. If
+	the surface is NULL, the pointer image is hidden completely.
+
+	The parameters hotspot_x and hotspot_y define the position of the
+	pointer surface relative to the pointer location. Its top-left corner
+	is always at (x, y) - (hotspot_x, hotspot_y), where (x, y) are the
+	coordinates of the pointer location, in surface local coordinates.
+
+	On surface.attach requests to the pointer surface, hotspot_x and
+	hotspot_y are decremented by the x and y parameters passed to the
+	request. Attach must be confirmed by wl_surface.commit as usual.
+
+	The hotspot can also be updated by passing the currently set pointer
+	surface to this request with new values for hotspot_x and hotspot_y.
+
+	The current and pending input regions of the wl_surface are cleared,
+	and wl_surface.set_input_region is ignored until the wl_surface is no
+	longer used as the cursor. When the use as a cursor ends, the current
+	and pending input regions become undefined, and the wl_surface is
+	unmapped.
+
+	This request gives the surface the role of a cursor. The role
+	assigned by this request is the same as assigned by
+	wl_pointer.set_cursor meaning the same surface can be
+	used both as a wl_pointer cursor and a wl_tablet cursor. If the
+	surface already has another role, it raises a protocol error
+	The surface may be used on multiple tablets and across multiple
+	seats.
+      </description>
+
+      <arg name="serial" type="uint" summary="serial of the enter event"/>
+      <arg name="surface" type="object" interface="wl_surface" allow-null="true"/>
+      <arg name="hotspot_x" type="int" summary="x coordinate in surface-relative coordinates"/>
+      <arg name="hotspot_y" type="int" summary="y coordinate in surface-relative coordinates"/>
+    </request>
 
     <event name="path">
       <description summary="path to the device">
@@ -364,49 +407,6 @@
 	the object.
       </description>
     </event>
-
-    <request name="destroy" type="destructor">
-      <description summary="destroy the tablet object"/>
-    </request>
-
-    <request name="set_cursor">
-      <description summary="set the tablet tool's surface">
-	Sets the surface of the pointer used for the tablet's tool object. This
-	surface is only shown when the tool is in proximity of the tablet. If
-	the surface is NULL, the pointer image is hidden completely.
-
-	The parameters hotspot_x and hotspot_y define the position of the
-	pointer surface relative to the pointer location. Its top-left corner
-	is always at (x, y) - (hotspot_x, hotspot_y), where (x, y) are the
-	coordinates of the pointer location, in surface local coordinates.
-
-	On surface.attach requests to the pointer surface, hotspot_x and
-	hotspot_y are decremented by the x and y parameters passed to the
-	request. Attach must be confirmed by wl_surface.commit as usual.
-
-	The hotspot can also be updated by passing the currently set pointer
-	surface to this request with new values for hotspot_x and hotspot_y.
-
-	The current and pending input regions of the wl_surface are cleared,
-	and wl_surface.set_input_region is ignored until the wl_surface is no
-	longer used as the cursor. When the use as a cursor ends, the current
-	and pending input regions become undefined, and the wl_surface is
-	unmapped.
-
-	This request gives the surface the role of a cursor. The role
-	assigned by this request is the same as assigned by
-	wl_pointer.set_cursor meaning the same surface can be
-	used both as a wl_pointer cursor and a wl_tablet cursor. If the
-	surface already has another role, it raises a protocol error
-	The surface may be used on multiple tablets and across multiple
-	seats.
-      </description>
-
-      <arg name="serial" type="uint" summary="serial of the enter event"/>
-      <arg name="surface" type="object" interface="wl_surface" allow-null="true"/>
-      <arg name="hotspot_x" type="int" summary="x coordinate in surface-relative coordinates"/>
-      <arg name="hotspot_y" type="int" summary="y coordinate in surface-relative coordinates"/>
-    </request>
 
     <enum name="error">
       <entry name="role" value="0" summary="given wl_surface has another role"/>
