@@ -348,14 +348,11 @@
 
     <event name="removed">
       <description summary="tablet removed event">
-	Sent when the tablet has been removed from the system. The behavior of
-	the wl_tablet_tool objects afterwards depends on the type of the
-	tablet. For tablets where serial numbers are reported, the tools will
-	be kept in memory until there are no other tablets which support serial
-	numbers connected to the system. If the tool object is one that lacks a
-	serial number because it originated from a tablet where serial numbers
-	are not reported, then it will be destroyed if the tablet it belongs to
-	is destroyed.
+	Sent when the tablet has been removed from the system. It is
+	compositor-dependent when a tool is removed. Some tools are
+	associated with a single tablet only and may get removed when the
+	tablet is removed. Other tools may be used on multiple tablets,
+	removing a tablet may not remove this tool.
 
 	When this event is received, the client must wl_tablet.destroy
 	the object.
