@@ -97,7 +97,6 @@
       <arg name="id" type="new_id" interface="wl_tablet_tool" summary="the newly added tablet tool"/>
       <arg name="tool_type" type="uint" summary="the physical tool type"/>
       <arg name="tool_serial" type="uint" summary="the unique serial number of the tool"/>
-      <arg name="extra_axes" type="uint" summary="a bitfield of all of the extra axes the tool supports"/>
     </event>
 
   </interface>
@@ -130,17 +129,28 @@
       <entry name="lens" value="0x147" summary="Lens"/>
     </enum>
 
-    <enum name="axis_flag">
-      <description summary="a group of additional axes for a tablet">
-	Describes a group of additional axes on a tablet.
+    <enum name="capability">
+      <description summary="capability flags for a tool">
+	Describes extra capabilities on a tablet.
 
 	Any tool must provide x and y values, extra axes are
 	device-specific.
       </description>
       <entry name="tilt" value="1" summary="Tilt axes"/>
       <entry name="pressure" value="2" summary="Pressure axis"/>
-      <entry name="distance" value="4" summary="Distance axis"/>
+      <entry name="distance" value="3" summary="Distance axis"/>
     </enum>
+
+    <event name="capability">
+      <description summary="tool capability notification">
+	This event is sent immediately after the wl_tablet_seat.tool_added
+	event to notify the client of any capabilities of this tool, beyond
+	the main set of x/y axes and tip up/down detection.
+
+	One event is sent for each extra capability available on this tool.
+      </description>
+      <arg name="capability" type="uint" summary="the capability"/>
+    </event>
 
     <event name="removed">
       <description summary="tool removed">
