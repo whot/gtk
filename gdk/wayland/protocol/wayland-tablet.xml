@@ -57,6 +57,12 @@
       wl_tablet_seat.tablet_added and wl_tablet_seat.tool_added events.
     </description>
 
+    <request name="destroy" type="destructor">
+      <description summary="release the memory for the tablet seat object">
+	This destroys the resources associated with the tablet seat.
+      </description>
+    </request>
+
     <enum name="tablet_type">
       <description summary="tablet type">
 	Describes the type of tablet
