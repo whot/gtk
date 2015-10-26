@@ -215,8 +215,8 @@
 
     <request name="set_cursor">
       <description summary="set the tablet tool's surface">
-	Sets the surface of the pointer used for the tablet's tool object. This
-	surface is only shown when the tool is in proximity of the tablet. If
+	Sets the surface of the cursor used for any tool on this tablet. The
+	surface is only shown when a tool is in proximity of the tablet. If
 	the surface is NULL, the pointer image is hidden completely.
 
 	The parameters hotspot_x and hotspot_y define the position of the
@@ -244,6 +244,9 @@
 	surface already has another role, it raises a protocol error
 	The surface may be used on multiple tablets and across multiple
 	seats.
+
+	This request is not tool-specific, once set the cursor will be shown
+	for any tool that comes into proximity of this tablet.
       </description>
 
       <arg name="serial" type="uint" summary="serial of the enter event"/>
