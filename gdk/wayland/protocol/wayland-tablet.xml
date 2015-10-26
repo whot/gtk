@@ -168,6 +168,26 @@
       on a tablet tool.
     </description>
 
+    <event name="path">
+      <description summary="path to the device">
+	A system-specific device path that indicates which device is behind
+	this wl_tablet. This information may be used to gather additional
+	information about the device, e.g. through libwacom.
+
+	A device may have more than one device path, if so, multiple
+	wl_tablet.path events are sent. A device may be emulated and not
+	have a device path, in that case this event will not be sent.
+
+	The format of the path is unspecified, it may be a device node, a
+	sysfs path, or some other identifier. It is up to the caller to
+	identify the string provided.
+
+	This event is sent immediately after wl_tablet_seat.tablet_added and
+	before any actual events from this device.
+      </description>
+      <arg name="path" type="string" summary="path to local device"/>
+    </event>
+
     <enum name="button_state">
       <description summary="physical button state">
 	Describes the physical state of a button which provoked the button event
