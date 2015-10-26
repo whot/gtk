@@ -152,6 +152,28 @@
       <arg name="capability" type="uint" summary="the capability"/>
     </event>
 
+    <enum name="hardware_id_format">
+      <description summary="the hardware id format">
+	Specifies the format of the hardware id in the
+	wl_tablet_tool.hardware_id event.
+      </description>
+      <entry name="wacom_stylus_id" value="0" />
+    </enum>
+
+    <event name="hardware_id">
+      <description summary="hardware id notification">
+	This event is sent immediately after the wl_tablet_seat.tool_added
+	event to notify the client of a hardware id available on this tool.
+
+	The hardware id is a device-specific id that provides extra
+	information about the tool in use, beyond the wl_tool.type
+	enumeration. For example, on Wacom tablets the hardware id of a
+	Grip Pen (a stylus) is 0x802.
+      </description>
+      <arg name="format" type="uint" summary="the type of the id" />
+      <arg name="id" type="uint" summary="the hardware id" />
+    </event>
+
     <event name="removed">
       <description summary="tool removed">
 	This event is sent when the tool is removed from the system. The client
