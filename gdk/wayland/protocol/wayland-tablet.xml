@@ -179,6 +179,9 @@
 	This event is sent when the tool is removed from the system. The client
 	should not expect the resource it currently has associated with the
 	tool to be used again if the tool comes back into proximity later.
+
+	When this event is received, the client must wl_tablet_tool.destroy
+	the object.
       </description>
     </event>
 
@@ -353,6 +356,9 @@
 	serial number because it originated from a tablet where serial numbers
 	are not reported, then it will be destroyed if the tablet it belongs to
 	is destroyed.
+
+	When this event is received, the client must wl_tablet.destroy
+	the object.
       </description>
     </event>
 
