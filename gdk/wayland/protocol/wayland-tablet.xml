@@ -386,6 +386,10 @@
 	longer used as the cursor. When the use as a cursor ends, the current
 	and pending input regions become undefined, and the wl_surface is
 	unmapped.
+
+	The surface may be the same surface as used for
+	wl_pointer.set_surface. The surface may be used on multiple
+	tablets and across multiple seats.
       </description>
 
       <arg name="serial" type="uint" summary="serial of the enter event"/>
@@ -393,5 +397,10 @@
       <arg name="hotspot_x" type="int" summary="x coordinate in surface-relative coordinates"/>
       <arg name="hotspot_y" type="int" summary="y coordinate in surface-relative coordinates"/>
     </request>
+
+    <enum name="error">
+      <entry name="role" value="0" summary="given wl_surface has another role"/>
+    </enum>
+
   </interface>
 </protocol>
