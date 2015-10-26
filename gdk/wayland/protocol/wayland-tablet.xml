@@ -387,9 +387,13 @@
 	and pending input regions become undefined, and the wl_surface is
 	unmapped.
 
-	The surface may be the same surface as used for
-	wl_pointer.set_surface. The surface may be used on multiple
-	tablets and across multiple seats.
+	This request gives the surface the role of a cursor. The role
+	assigned by this request is the same as assigned by
+	wl_pointer.set_cursor meaning the same surface can be
+	used both as a wl_pointer cursor and a wl_tablet cursor. If the
+	surface already has another role, it raises a protocol error
+	The surface may be used on multiple tablets and across multiple
+	seats.
       </description>
 
       <arg name="serial" type="uint" summary="serial of the enter event"/>
