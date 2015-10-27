@@ -63,23 +63,9 @@
       </description>
     </request>
 
-    <enum name="tablet_type">
-      <description summary="tablet type">
-	Describes the type of tablet
-      </description>
-
-      <entry name="external" value="0" summary="The tablet is an external tablet, such as an Intuos"/>
-      <entry name="internal" value="1" summary="The tablet is a built-in tablet, usually in a laptop"/>
-      <entry name="display" value="2" summary="The tablet is a display tablet, such as a Cintiq"/>
-    </enum>
-
     <event name="tablet_added">
       <description summary="new device notification"/>
       <arg name="id" type="new_id" interface="wl_tablet" summary="the newly added graphics tablet"/>
-      <arg name="name" type="string" summary="the device name"/>
-      <arg name="vid" type="uint" summary="vendor id"/>
-      <arg name="pid" type="uint" summary="product id"/>
-      <arg name="type" type="uint" summary="the tablet type (internal, external, ...)"/>
     </event>
 
     <event name="tool_added">
@@ -300,6 +286,41 @@
 	after this event and the static description of the tablet is
 	considered complete.
       </description>
+    </event>
+
+    <event name="name">
+      <description summary="tablet device name">
+	This event is sent in the initial burst of events before the
+	wl_tablet.done event.
+      </description>
+      <arg name="name" type="string" summary="the device name"/>
+    </event>
+
+    <event name="id">
+      <description summary="tablet device vid/pid">
+	This event is sent in the initial burst of events before the
+	wl_tablet.done event.
+      </description>
+      <arg name="vid" type="uint" summary="vendor id"/>
+      <arg name="pid" type="uint" summary="product id"/>
+    </event>
+
+    <enum name="tablet_type">
+      <description summary="tablet type">
+	Describes the type of tablet
+      </description>
+
+      <entry name="external" value="0" summary="The tablet is an external tablet, such as an Intuos"/>
+      <entry name="internal" value="1" summary="The tablet is a built-in tablet, usually in a laptop"/>
+      <entry name="display" value="2" summary="The tablet is a display tablet, such as a Cintiq"/>
+    </enum>
+
+    <event name="type">
+      <description summary="the tablet type">
+	This event is sent in the initial burst of events before the
+	wl_tablet.done event.
+      </description>
+      <arg name="type" type="uint" summary="the tablet type (internal, external, ...)"/>
     </event>
 
     <event name="path">
