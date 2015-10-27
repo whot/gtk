@@ -88,21 +88,11 @@
 	with a tablet comes into use. This provides the information about the
 	tool, along with a wl_tablet_tool object that is unique to this tool.
 
-	If the tablet the tool is being used with does not report the serial
-	numbers for each tool, then the uniqueness of each tool object cannot
-	be guaranteed. On tablets where the serial number is not reported, the
-	"tool_serial" argument will always be 0.
-
-	If multiple tablets are available in the same seat and the tool is
-	uniquely identifiable by the serial number, that tool may move
-	between tablets.
 
         This event is sent once when a tool gets into proximity of a before
         a wl_tablet.proximity_in event.
       </description>
       <arg name="id" type="new_id" interface="wl_tablet_tool" summary="the newly added tablet tool"/>
-      <arg name="tool_type" type="uint" summary="the physical tool type"/>
-      <arg name="tool_serial" type="uint" summary="the unique serial number of the tool"/>
     </event>
 
   </interface>
@@ -142,6 +132,37 @@
       <entry name="mouse" value="0x146" summary="Mouse"/>
       <entry name="lens" value="0x147" summary="Lens"/>
     </enum>
+
+    <event name="type">
+      <description summary="tool type">
+	The tool type is the high-level type of the tool and usually decides
+	the interaction expected from this tool.
+
+	This event is sent in the initial burst of events before the
+	wl_tablet_tool.done event.
+      </description>
+      <arg name="tool_type" type="uint" summary="the physical tool type"/>
+    </event>
+
+    <event name="serial_id">
+      <description summary="unique serial number of the tool">
+	If the tool can be identified by a unique serial number, this event
+	notifies the client of the serial number.
+
+	If multiple tablets are available in the same seat and the tool is
+	uniquely identifiable by the serial number, that tool may move
+	between tablets.
+
+	Otherwise, if the device has no serial number and this event is
+	missing, the tool is tied to the tablet it first comes into
+	proximity with. Even if the physical tool is used on multiple
+	tablets, separate wl_tablet_tool objects will be provided.
+
+	This event is sent in the initial burst of events before the
+	wl_tablet_tool.done event.
+      </description>
+      <arg name="serial_id" type="uint" summary="the unique serial number of the tool"/>
+    </event>
 
     <enum name="capability">
       <description summary="capability flags for a tool">
