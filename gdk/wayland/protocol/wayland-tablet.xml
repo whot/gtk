@@ -293,6 +293,15 @@
       <arg name="hotspot_y" type="int" summary="y coordinate in surface-relative coordinates"/>
     </request>
 
+    <event name="done">
+      <description summary="tablet description events sequence complete">
+	This event is sent immediately to signal the end of the initial
+	burst of descriptive events. No more descriptive events will be sent
+	after this event and the static description of the tablet is
+	considered complete.
+      </description>
+    </event>
+
     <event name="path">
       <description summary="path to the device">
 	A system-specific device path that indicates which device is behind
@@ -307,8 +316,8 @@
 	sysfs path, or some other identifier. It is up to the caller to
 	identify the string provided.
 
-	This event is sent immediately after wl_tablet_seat.tablet_added and
-	before any actual events from this device.
+	This event is sent in the initial burst of events before the
+	wl_tablet.done event.
       </description>
       <arg name="path" type="string" summary="path to local device"/>
     </event>
