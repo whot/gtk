@@ -162,6 +162,9 @@
 	the main set of x/y axes and tip up/down detection.
 
 	One event is sent for each extra capability available on this tool.
+
+	This event is sent in the initial burst of events before the
+	wl_tablet_tool.done event.
       </description>
       <arg name="capability" type="uint" summary="the capability"/>
     </event>
@@ -183,9 +186,21 @@
 	information about the tool in use, beyond the wl_tool.type
 	enumeration. For example, on Wacom tablets the hardware id of a
 	Grip Pen (a stylus) is 0x802.
+
+	This event is sent in the initial burst of events before the
+	wl_tablet_tool.done event.
       </description>
       <arg name="format" type="uint" summary="the type of the id" />
       <arg name="id" type="uint" summary="the hardware id" />
+    </event>
+
+    <event name="done">
+      <description summary="tool description events sequence complete">
+	This event is sent immediately to signal the end of the initial
+	burst of descriptive events (e.g. capability events). No more
+	capability or hardware_id events will be sent after this event and
+	the static description of the tool is considered complete.
+      </description>
     </event>
 
     <event name="removed">
