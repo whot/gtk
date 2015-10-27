@@ -98,9 +98,10 @@
 
     <request name="set_cursor">
       <description summary="set the tablet tool's surface">
-	Sets the surface of the cursor used for this tool on any tablet. The
-	surface is only shown when this tool is in proximity of a tablet. If
-	the surface is NULL, the pointer image is hidden completely.
+	Sets the surface of the cursor used for this tool on the given
+	tablet. The surface is only shown when this tool is in proximity of
+	this tablet. If the surface is NULL, the pointer image is hidden
+	completely.
 
 	The parameters hotspot_x and hotspot_y define the position of the
 	pointer surface relative to the pointer location. Its top-left corner
@@ -127,15 +128,13 @@
 	surface already has another role, it raises a protocol error
 	The surface may be used on multiple tablets and across multiple
 	seats.
-
-	This request is not tablet-specific, once set the cursor will be shown
-	for this tool if it comes into proximity of any tablet.
       </description>
 
       <arg name="serial" type="uint" summary="serial of the enter event"/>
       <arg name="surface" type="object" interface="wl_surface" allow-null="true"/>
       <arg name="hotspot_x" type="int" summary="x coordinate in surface-relative coordinates"/>
       <arg name="hotspot_y" type="int" summary="y coordinate in surface-relative coordinates"/>
+      <arg name="tablet" type="object" interface="wl_tablet" summary="the tablet" />
     </request>
 
     <request name="destroy" type="destructor">
