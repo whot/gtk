@@ -80,7 +80,6 @@
       </description>
       <arg name="id" type="new_id" interface="wl_tablet_tool" summary="the newly added tablet tool"/>
     </event>
-
   </interface>
 
   <interface name="wl_tablet_tool" version="1">
@@ -362,7 +361,6 @@
 	proximity_in event indicate the button state of the tool at the time
 	of proximity in.
       </description>
-
       <arg name="serial" type="uint"/>
       <arg name="time" type="uint" summary="The time of the event with millisecond granularity"/>
       <arg name="tool" type="object" interface="wl_tablet_tool" summary="The tool that came into proximity"/>
@@ -384,7 +382,6 @@
 	be sent until the button is actually released or the tool leaves the
 	proximity of the tablet.
       </description>
-
       <arg name="time" type="uint" summary="The time of the event with millisecond granularity"/>
     </event>
 
@@ -482,6 +479,5 @@
     <enum name="error">
       <entry name="role" value="0" summary="given wl_surface has another role"/>
     </enum>
-
   </interface>
 </protocol>
