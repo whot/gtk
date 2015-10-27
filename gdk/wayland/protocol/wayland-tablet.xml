@@ -146,8 +146,8 @@
 
     <event name="serial_id">
       <description summary="unique serial number of the tool">
-	If the tool can be identified by a unique serial number, this event
-	notifies the client of the serial number.
+	If the tool can be identified by a unique 64-bit serial number, this
+	event notifies the client of the serial number.
 
 	If multiple tablets are available in the same seat and the tool is
 	uniquely identifiable by the serial number, that tool may move
@@ -161,7 +161,8 @@
 	This event is sent in the initial burst of events before the
 	wl_tablet_tool.done event.
       </description>
-      <arg name="serial_id" type="uint" summary="the unique serial number of the tool"/>
+      <arg name="serial_id_msb" type="uint" summary="the unique serial number of the tool, most significant bits"/>
+      <arg name="serial_id_lsb" type="uint" summary="the unique serial number of the tool, least significant bits"/>
     </event>
 
     <enum name="capability">
@@ -203,7 +204,7 @@
 	This event is sent immediately after the wl_tablet_seat.tool_added
 	event to notify the client of a hardware id available on this tool.
 
-	The hardware id is a device-specific id that provides extra
+	The hardware id is a device-specific 64-bit id that provides extra
 	information about the tool in use, beyond the wl_tool.type
 	enumeration. For example, on Wacom tablets the hardware id of a
 	Grip Pen (a stylus) is 0x802.
@@ -212,7 +213,8 @@
 	wl_tablet_tool.done event.
       </description>
       <arg name="format" type="uint" summary="the type of the id" />
-      <arg name="id" type="uint" summary="the hardware id" />
+      <arg name="hardware_id_msb" type="uint" summary="the hardware id, most significant bits"/>
+      <arg name="hardware_id_lsb" type="uint" summary="the hardware id, least significant bits"/>
     </event>
 
     <event name="done">
